@@ -120,10 +120,13 @@ class VoterHundler
     private static ObjectOutputStream objOut;
 
     private static final String Counter_and_Validator_PathKeyString = "CounterAndValidatorPubKeys";
+    private static final String key2_keyCheck_M_sigC_M_M_enCheck_B_B_en = "Phase2AfterWaiting";
     private static byte[] counterPubKey;
     private static byte[] validatorPubKey;
 
     private static AES256 aesCipher;
+    private static String bulletin;
+    private static String usedBulletin;
 
     private static byte[] name_sigV;
     private static byte[] M_mark;
@@ -135,6 +138,12 @@ class VoterHundler
     private static byte[] simKey4step9_enC;
     private static byte[] M_sign_mark;
     private static int name_i;
+    private static byte[] key2;
+    private static byte[] B_en2;
+    private static byte[] keyCheck;
+    private static byte[] M_enCheck;
+    private static byte[] M_sigC_and_M_enCheck_and_B_en2_enC;
+    private static int k_waitSec;
 
     private static Scanner inCon;
 
@@ -153,9 +162,7 @@ class VoterHundler
 
             VoterHundler.logs("Socket was created");
 
-            System.out.println(VoterHundler.giveInfoAboutVote());
-
-            step5_init_name_sigV();
+            step_start();
             
         }
         catch(Exception e)
@@ -165,6 +172,27 @@ class VoterHundler
         finally
         {
             VoterHundler.closeConnection();
+        }
+	}
+
+	private static void step_start()
+	{
+		VoterHundler.logs("Trying to get info about vote...");
+        bulletin = VoterHundler.giveInfoAboutVote();
+        System.out.println(bulletin);
+
+        VoterHundler.logs("Trying to find file \"" + key2_keyCheck_M_sigC_M_M_enCheck_B_B_en + "\"...");
+        
+        File file = new File(key2_keyCheck_M_sigC_M_M_enCheck_B_B_en);
+		if(file.exists() && !file.isDirectory())
+		{
+			VoterHundler.logs("Finded. Go to step " + "step29_load_again" + ".");
+			step29_load_again();
+		}
+		else
+		{
+			VoterHundler.logs("File not finded. Go to step " + "step5_init_name_sigV" + ".");
+        	step5_init_name_sigV();
         }
 	}
 
@@ -184,8 +212,8 @@ class VoterHundler
 		//7. gen M
 		VoterHundler.logs("Begin generated mark M...");
 		BigInteger M = Tools.rndBigInteger(new BigInteger("1000000"), new BigInteger("1000000000000000000000000"));
-		M_mark = M.toByteArray();
-		VoterHundler.logs("M = " + ByteWorker.Bytes2String(M_mark));
+		M_mark = (VoterHundler.getVoteMark() + ":::" + ByteWorker.Bytes2String(M.toByteArray())).getBytes();
+		VoterHundler.logs("M = " + new String(M_mark));
 		step8_hide();
 	}
 
@@ -196,7 +224,7 @@ class VoterHundler
 		r_hide = RSA4096.genClosingMultiplier(counterPubKey);
 		VoterHundler.logs("Hidding M with closing multiplier...");
 		M_bl_mark = RSA4096.blind(M_mark, r_hide, counterPubKey);
-		VoterHundler.logs("Hided");
+		VoterHundler.logs("Hided.");
 		step9_10_sim_encrypt();
 	}
 
@@ -297,7 +325,7 @@ class VoterHundler
 
 	private static void step22_check_and_unhide()
 	{
-		//*22. Видит опубликованное M_bl_sigC и снимает закрывающее число r: M_sigC = unblind(M_bl_sigC, r).
+		//*22. Видит опубликованное M_bl_sigC и снимает закрывающее число r: M_sigC = unblind(M_bl_sigC, r)
 		VoterHundler.logs("Receiving answer from server...");
 		Message msg = VoterHundler.receive();
 		VoterHundler.logs("Received...");
@@ -319,8 +347,8 @@ class VoterHundler
 				byte[] signedMark_bl = ByteWorker.String2Bytes(neededRow[1]);
 				M_sign_mark = RSA4096.unblind(M_mark, signedMark_bl, r_hide, counterPubKey);
 				byte[] buffString = RSA4096.unsign(M_sign_mark, counterPubKey);
-				VoterHundler.logs("Getting signed by counter mark: " + ByteWorker.Bytes2String(buffString));
-				step_end(); //!!!!!CONTINUE!!!!!
+				VoterHundler.logs("Getting signed by counter mark: " + new String(buffString));
+				step23_makeChoice();
 			}
 			else
 			{
@@ -328,6 +356,160 @@ class VoterHundler
 				step15_16_enKey_and_send();
 			}
 		}
+	}
+
+	private static void step23_makeChoice() 
+	{
+		//23. Делает выбор в бюллетене B
+		String uc;
+		do
+		{
+			VoterHundler.logs("User making his choice...");
+			System.out.print("Make your choice: \n> ");
+			uc = inCon.nextLine();
+		}while(VoterHundler.checkChoiceInBulletin(uc) != true);
+		usedBulletin = "User choice: \"" + uc + "\"";
+		VoterHundler.logs("User choose: \"" + usedBulletin + "\".");
+		step24_25_genKey_and_enB();
+	}
+
+	private static void step24_25_genKey_and_enB()
+	{
+		//24. Генерирует ещё один (другой) ключ для симметричного шифрования key2
+		VoterHundler.logs("Generating symmetric key2...");
+		aesCipher.genKey();
+		key2 = aesCipher.getKey();
+		VoterHundler.logs("key2 = " + ByteWorker.Bytes2String(key2));
+		//25. Шифрует бюллетень B_en2 = encrypt(B, key2)
+		VoterHundler.logs("Encrypting bulletin by key2...");
+		B_en2 = aesCipher.encrypt(usedBulletin.getBytes());
+		VoterHundler.logs("Encrypted...");
+		step26_genCheckKey_and_M_enCheck();
+	}
+
+	private static void step26_genCheckKey_and_M_enCheck()
+	{
+		//26. Генерирует ещё один ключ для симметричного шифрования keyCheck и шифрует: M_enCheck = encrypt(M, keyCheck)
+		VoterHundler.logs("Generating symmetric keyCheck...");
+		aesCipher.genKey();
+		keyCheck = aesCipher.getKey();
+		VoterHundler.logs("keyCheck = " + ByteWorker.Bytes2String(keyCheck));
+		VoterHundler.logs("Encrypting M_mark by keyCheck and getting M_enCheck...");
+		M_enCheck = aesCipher.encrypt(M_mark);
+		VoterHundler.logs("Encrypted...");
+		step27_en4send();
+	}
+
+	private static void step27_en4send()
+	{
+		//27. {M_sigC, M_enCheck, B_en2}_enC = encrypt({M_sigC, M_enCheck, B_en2}, C_pubKey)
+		VoterHundler.logs("Encrypting {M_sigC, M_enCheck, B_en2} for send...");
+		byte[][] buffBA = new byte[3][];
+		buffBA[0] = M_sign_mark;
+		buffBA[1] = M_enCheck;
+		buffBA[2] = B_en2;
+		byte[] M_sigC_and_M_enCheck_and_B_en2 = ByteWorker.Arrays2Array(buffBA);
+		M_sigC_and_M_enCheck_and_B_en2_enC = RSA4096.encrypt(M_sigC_and_M_enCheck_and_B_en2, counterPubKey);
+		VoterHundler.logs("Encrypted and got {M_sigC, M_enCheck, B_en2}_enC...");
+		step28_genK_and_save();
+	}
+
+	private static void step28_genK_and_save()
+	{
+		//28. Генерирует число k.
+		VoterHundler.logs("Generating k...");
+		Random r = new Random();
+		k_waitSec = r.nextInt(21)+5;
+		VoterHundler.logs("k = " + k_waitSec);
+
+		/*Нужно сохранить:
+			0) key2
+			1) keyCheck
+			2) M_sigC
+			3) M
+			4) M_enCheck
+			5) B
+			6) B_en2
+			7) toSend
+			Итого 8 эл. Можно не надо?
+		*/
+		VoterHundler.logs("Trying to save {key2, keyCheck, M_sigC, M, M_enCheck, B, B_en} in file \"" + key2_keyCheck_M_sigC_M_M_enCheck_B_B_en + "\".");
+		byte[][] buffBA = new byte[8][];
+		buffBA[0] = key2;
+		buffBA[1] = keyCheck;
+		buffBA[2] = M_sign_mark;
+		buffBA[3] = M_mark;
+		buffBA[4] = M_enCheck;
+		buffBA[5] = usedBulletin.getBytes();
+		buffBA[6] = B_en2;
+		buffBA[7] = M_sigC_and_M_enCheck_and_B_en2_enC;
+		byte[] buffer;
+		try(FileOutputStream fos = new FileOutputStream(key2_keyCheck_M_sigC_M_M_enCheck_B_B_en))
+        {
+            buffer = ByteWorker.Arrays2Array(buffBA);
+            fos.write(buffer, 0, buffer.length);
+        }
+        catch(IOException e)
+        {
+            e.printStackTrace();
+        }
+        VoterHundler.logs("Saved!");
+        step29_wait_and_wait();
+	}
+
+	private static void step29_wait_and_wait()
+	{
+		//29. Ждёт k сек.
+		//Пойду реально попью чай и почитаю, а не вот этим вот заниматься...
+		System.out.println("Now the program will wait for " + k_waitSec + " seconds. At this step, you can turn it off and come back later.");
+		VoterHundler.logs("Begin waiting for " + k_waitSec + " sec...");
+		try
+		{
+			Thread.sleep(k_waitSec*1000);
+		}
+        catch(Exception e)
+        {
+        	e.printStackTrace();
+        }
+		VoterHundler.logs("The waiting was successful. Next step");
+		step30_sendToCounter();
+	}
+
+	private static void step29_load_again()
+	{
+		byte[][] buffBA;
+		byte[] buffer = null;
+		VoterHundler.logs("Trying to load {key2, keyCheck, M_sigC, M, M_enCheck, B, B_en} from file \"" + key2_keyCheck_M_sigC_M_M_enCheck_B_B_en + "\"...");
+		try(FileInputStream fin = new FileInputStream(key2_keyCheck_M_sigC_M_M_enCheck_B_B_en))
+        {
+			buffer = new byte[fin.available()];
+            fin.read(buffer, 0, buffer.length);
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
+		buffBA = ByteWorker.Array2Arrays(buffer);
+		key2 = buffBA[0];
+		keyCheck = buffBA[1];
+		M_sign_mark = buffBA[2];
+		M_mark = buffBA[3];
+		M_enCheck = buffBA[4];
+		usedBulletin = new String(buffBA[5]);
+		B_en2 = buffBA[6];
+		M_sigC_and_M_enCheck_and_B_en2_enC = buffBA[7];
+		VoterHundler.logs("Load successfully");
+		step30_sendToCounter();
+	}
+
+	private static void step30_sendToCounter()
+	{
+		//30. Отсылает счётчику {M_sigC, M_enCheck, B_en2}_enC
+		VoterHundler.logs("Sending {M_sigC, M_enCheck, B_en2}_enC to counter...");
+		Message msg = Message.makeMessage().setType(Message.ALGORITHM).setInt(31).setBytes(M_sigC_and_M_enCheck_and_B_en2_enC);
+		VoterHundler.send(msg);
+		VoterHundler.logs("Sended.");
+		step_end(); //CONTINUE!!!!!
 	}
 
 	private static void step_end()
@@ -353,6 +535,35 @@ class VoterHundler
 			VoterHundler.logs("Error. Message from server: " + msgAns.getString());
 			return null;
 		}
+	}
+
+	private static String getVoteMark()
+	{
+		int b = bulletin.indexOf("Vote ");
+		int e = bulletin.indexOf(":::");
+		return bulletin.substring(b+5, e);
+	}
+
+	private static boolean checkChoiceInBulletin(String userChoice)
+	{
+		try
+		{
+			int c = VoterHundler.String_count(bulletin, "\t");
+			int uc = new Integer(userChoice).intValue();
+			if(uc < 1 || uc > c)
+				return false;
+			return true;
+		}
+		catch(Exception e)
+		{
+			//ignor
+		}
+		return false;
+	}
+
+	public static int String_count(String str, String target)
+	{
+    	return (str.length() - str.replace(target, "").length()) / target.length();
 	}
 
 	private static void closeConnection()

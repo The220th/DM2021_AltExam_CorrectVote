@@ -250,7 +250,7 @@ class CounterHundler
     {
     	String res = "";
     	res += "\n===============\n";
-    	res += "Vote " + voteMark + ". " + "Options: \n";
+    	res += "Vote " + voteMark + "::: " + "Options: \n";
     	for(int i = 0; i < votingOptions.length; ++i)
     		res += "\t" + (i+1) + ") " + votingOptions[i] + ". \n";
     	res += "===============\n";

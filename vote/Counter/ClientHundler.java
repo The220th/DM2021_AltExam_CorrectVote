@@ -47,6 +47,8 @@ public class ClientHundler extends Thread
                 		step13_decrypt_and_publish(msg);
                 	if(msg.getInt() == 17)
                 		step17_decrypt_and_decrypt_and_publish(msg);
+                	if(msg.getInt() == 31)
+                		step31_decrypt_and_insign_and_publish(msg);
                 }
                 if(msg.getType() == Message.GET_VOTE_INFO)
                 	tellVoteInfo();
@@ -157,6 +159,32 @@ public class ClientHundler extends Thread
 			Message errMsg = Message.makeMessage().setType(Message.ALGORITHM_ERROR).setString("This record is already exists");
 			this.send(errMsg);
 		}
+	}
+
+	private void step31_decrypt_and_insign_and_publish(Message msg4step31)
+	{
+		//31. Принимает сообщение и дешифрует: {M_sigC, M_enCheck, B_en2} = decrypt({M_sigC, M_enCheck, B_en2}_enC, C_privKey)
+
+		byte[] M_sigC_and_M_enCheck_and_B_en2_enC = msg4step31.getBytes();
+		byte[] M_sigC_and_M_enCheck_and_B_en2 = RSA4096.decrypt(M_sigC_and_M_enCheck_and_B_en2_enC, CounterHundler.getPrivKey());
+		byte[][] buffBA = ByteWorker.Array2Arrays(M_sigC_and_M_enCheck_and_B_en2);
+
+		byte[] M_sigC = buffBA[0];
+		byte[] M_enCheck = buffBA[1];
+		byte[] B_en2 = buffBA[1];
+
+		//32. Проверяет свою подпись: M = unsign(M_sigC, C_privKey)
+		
+		String string_M_sigC = new String(RSA4096.unsign(M_sigC, CounterHundler.getPubKey()));
+		if(!CounterHundler.getVoteMark().equals( CounterHundler.getVoteMark(string_M_sigC) ) )
+		{
+			Message errMsg = Message.makeMessage().setType(Message.ALGORITHM_ERROR).setString("Sign is not correct");
+			this.send(errMsg);
+		}
+
+		//33. Публикует в специальном списке {M, M_enCheck, B_en2}
+
+		System.out.println(string_M_sigC);
 	}
 
     private void closeConnection()
