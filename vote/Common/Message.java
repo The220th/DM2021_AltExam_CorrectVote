@@ -8,6 +8,9 @@ import CipherLib.ByteWorker;
 public class Message implements Serializable
 {
 	public static final int OTHER = -1;
+	public static final int VOTE_INFO = 3;
+	public static final int GET_VOTE_INFO = 4;
+	public static final int ALGORITHM_ERROR = 6;
 	public static final int ALGORITHM = 13;
 	public static final int OVER_AND_OUT = 15;
 

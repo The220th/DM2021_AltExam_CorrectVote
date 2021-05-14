@@ -43,19 +43,19 @@ import CipherLib.Tools;
 
 	Счётчик:
 
-13. Получает сообщение и дешифрует: {name_sigV, M_bl}_en = decrypt({name_sigV, M_bl}_en_enC, C_privKey).
+*13. Получает сообщение и дешифрует: {name_sigV, M_bl}_en = decrypt({name_sigV, M_bl}_en_enC, C_privKey).
 
 14. Публикует {name_sigV, M_bl}_en в специальном списке.
 
-	Голосующий видит опубликованное {name_sigV, M_bl}_en и:
+*14.a.	Голосующий видит опубликованное {name_sigV, M_bl}_en и:
 
-15. Шифрует ключ для отправки: key_enC = encrypt(key, C_pubKey).
+15. Шифрует ключ для отправки: key_enC+номерстроки = encrypt(key, C_pubKey).
 
-16. Высылает key_enC.
+16. Высылает key_enC+номерстроки.
 
     Счётчик:
 
-17. Дешифрует: key = decrypt(key_enC, C_privKey).
+*17. Дешифрует: key+номерстроки = decrypt(key_enC+номерстроки, C_privKey).
 
 18. Дешифрует сообщение голосующего в открытом списке: {name_sigV, M_bl} = decrypt({name_sigV, M_bl}_en, key).
 
@@ -63,11 +63,11 @@ import CipherLib.Tools;
 
 20. Подписывает M_bl_sigC = sign(M_bl, C_privKey).
 
-21. Публикует рядом с {name_sigV, M_bl}_en ещё и M_bl_sigC.
+21. Публикует рядом с {name_sigV, M_bl}_en ещё и {M_bl_sigC, name_sigV, name}.
 
     Голосующий:
 
-22. Видит опубликованное M_bl_sigC и снимает закрывающее число r: M_sigC = unblind(M_bl_sigC, r).
+*22. Видит опубликованное M_bl_sigC и снимает закрывающее число r: M_sigC = unblind(M_bl_sigC, r).
 
 23. Делает выбор в бюллетене B.
 
@@ -131,6 +131,10 @@ class VoterHundler
     private static byte[] M_bl_mark;
     private static byte[] simKey4step9;
     private static byte[] name_sigV_and_M_bl_en;
+    private static byte[] name_sigV_and_M_bl_en_enC;
+    private static byte[] simKey4step9_enC;
+    private static byte[] M_sign_mark;
+    private static int name_i;
 
     private static Scanner inCon;
 
@@ -148,6 +152,8 @@ class VoterHundler
             clientSocket = new Socket("localhost", 5051);
 
             VoterHundler.logs("Socket was created");
+
+            System.out.println(VoterHundler.giveInfoAboutVote());
 
             step5_init_name_sigV();
             
@@ -209,29 +215,144 @@ class VoterHundler
 		byte[] toEncrypt = ByteWorker.Arrays2Array(buffBA);
 		name_sigV_and_M_bl_en = aesCipher.encrypt(toEncrypt);
 		VoterHundler.logs("Encrypted.");
-		step11_12_en4send_send2Counter();
+		step11_12_en4send();
 	}
 
-	private static void step11_12_en4send_send2Counter()
+	private static void step11_12_en4send()
 	{
 		//11. {name_sigV, M_bl}_en_enC = encrypt({name_sigV, M_bl}_en, C_pubKey)
-		//12. send to counter {name_sigV, M_bl}_en_enC
+		
 		//byte[] prepare_2_die_edidion_sigV_and_M_bl_and_why_is_it_so_stypid_and_The_quick_brown_fox_jumps_over_the_lazy_dog_bee_movie_scrypt_I_do_not_want_to_programming_this_f4cking_sh1t_en_enC_enV;
 		VoterHundler.logs("Encrypting for send to counter...");
-		byte[] name_sigV_and_M_bl_en_enC = RSA4096.encrypt(name_sigV_and_M_bl_en, counterPubKey);
+		name_sigV_and_M_bl_en_enC = RSA4096.encrypt(name_sigV_and_M_bl_en, counterPubKey);
 		VoterHundler.logs("Encrypted.");
+		step12_send2Counter();
+	}
+
+	private static void step12_send2Counter()
+	{
+		//12. send to counter {name_sigV, M_bl}_en_enC
 		VoterHundler.logs("Sending {name_sigV, M_bl}_en_enC...");
 		Message msg = Message.makeMessage().setType(Message.ALGORITHM).setInt(13).setBytes(name_sigV_and_M_bl_en_enC);
 		VoterHundler.send(msg);
 		VoterHundler.logs("Sended.");
-		after_step14_requestListOfNames();
+		step14a_requestListOfNames();
 	}
 
-	private static void after_step14_requestListOfNames()
+	private static void step14a_requestListOfNames()
 	{
+		int i;
+		//Голосующий видит опубликованное {name_sigV, M_bl}_en
+		VoterHundler.logs("Receiving answer from server...");
 		Message msg = VoterHundler.receive();
-		String[][] sArrays = (String[][])ObjectConverter.bytes2obj(msg.getBytes());
-		System.out.println(sArrays[0][0]);
+		VoterHundler.logs("Message received.");
+		if(msg.getType() == Message.ALGORITHM_ERROR)
+		{
+			VoterHundler.logs("Error. Message from server: " + msg.getString());
+			step_end();
+		}
+		else
+		{
+			String[][] sArrays = (String[][])ObjectConverter.bytes2obj(msg.getBytes());
+			VoterHundler.logs("Trying to find our message is list of names...");
+			boolean FINDED = false;
+			String toFindString = ByteWorker.Bytes2String(name_sigV_and_M_bl_en);
+			for(i = 0; i < sArrays.length; ++i)
+				if(sArrays[i][0].equals(toFindString))
+				{
+					FINDED = true;
+					break;
+				}
+			if(FINDED)
+			{
+				name_i = i;
+				VoterHundler.logs("Finded in line " + name_i + ".");
+				step15_16_enKey_and_send();
+			}
+			else
+			{
+				VoterHundler.logs("Cannot find. Trying again...");
+				step12_send2Counter();
+			}
+		}
+	}
+
+	private static void step15_16_enKey_and_send()
+	{
+		//15. Шифрует ключ для отправки: key_enC+номерстроки = encrypt(key, C_pubKey)
+		//16. Высылает key_enC
+		VoterHundler.logs("Encrypting key " + ByteWorker.Bytes2String(simKey4step9) + " and number line " + name_i + "...");
+		byte[][] buffBA = new byte[2][];
+		buffBA[0] = simKey4step9;
+		buffBA[1] = ByteWorker.Int2Bytes(name_i);
+		byte[] simKey4step9_and_name_i = ByteWorker.Arrays2Array(buffBA);
+		simKey4step9_enC = RSA4096.encrypt(simKey4step9_and_name_i, counterPubKey);
+		VoterHundler.logs("Encrypted.");
+		VoterHundler.logs("Sending key_enC+numberline to counter...");
+		Message msg = Message.makeMessage().setType(Message.ALGORITHM).setInt(17).setBytes(simKey4step9_enC);
+		VoterHundler.send(msg);
+		VoterHundler.logs("Sended.");
+		step22_check_and_unhide();
+	}
+
+	private static void step22_check_and_unhide()
+	{
+		//*22. Видит опубликованное M_bl_sigC и снимает закрывающее число r: M_sigC = unblind(M_bl_sigC, r).
+		VoterHundler.logs("Receiving answer from server...");
+		Message msg = VoterHundler.receive();
+		VoterHundler.logs("Received...");
+		if(msg.getType() == Message.ALGORITHM_ERROR)
+		{
+			VoterHundler.logs("Error. Message from server: " + msg.getString());
+			step_end();
+		}
+		else
+		{
+			VoterHundler.logs("Trying to check {M_bl_sigC, name_sigV, name} in public list...");
+			String[][] sArrays = (String[][])ObjectConverter.bytes2obj(msg.getBytes());
+			VoterHundler.logs("Received table. Len is " + sArrays.length);
+			String[] neededRow = sArrays[name_i];
+			if(neededRow.length == 4)
+			{
+				String nameInList = neededRow[3];
+				VoterHundler.logs("Finded name: \"" + nameInList + "\". ");
+				byte[] signedMark_bl = ByteWorker.String2Bytes(neededRow[1]);
+				M_sign_mark = RSA4096.unblind(M_mark, signedMark_bl, r_hide, counterPubKey);
+				byte[] buffString = RSA4096.unsign(M_sign_mark, counterPubKey);
+				VoterHundler.logs("Getting signed by counter mark: " + ByteWorker.Bytes2String(buffString));
+				step_end(); //!!!!!CONTINUE!!!!!
+			}
+			else
+			{
+				VoterHundler.logs("Cannot find. Retrying...");
+				step15_16_enKey_and_send();
+			}
+		}
+	}
+
+	private static void step_end()
+	{
+		VoterHundler.logs("Ending of working.");
+	}
+
+	private static String giveInfoAboutVote()
+	{
+		VoterHundler.logs("Sending request for information about the vote...");
+		Message msg = Message.makeMessage().setType(Message.GET_VOTE_INFO);
+		VoterHundler.send(msg);
+		VoterHundler.logs("Sended.");
+		VoterHundler.logs("Receiving info from server...");
+		Message msgAns = VoterHundler.receive();
+		if(msgAns.getType() == Message.VOTE_INFO)
+		{
+			VoterHundler.logs("Received");
+			return msgAns.getString();
+		}
+		else
+		{
+			VoterHundler.logs("Error. Message from server: " + msgAns.getString());
+			return null;
+		}
 	}
 
 	private static void closeConnection()

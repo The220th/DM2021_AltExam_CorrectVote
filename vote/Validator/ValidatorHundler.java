@@ -23,8 +23,13 @@ class ValidatorHundler
 
     public static void main(String[] args) throws IOException
     {
+    	System.out.print("Input vote mark: \n> ");
+    	String votemark = in.nextLine();
+
         System.out.print("Input msg for sign: \n> ");
         String inputed = in.nextLine();
+
+        inputed = votemark + "::: " + inputed;
 
         System.out.println("==========\nThe message: \"" + inputed + "\" - will be signed.\n==========\n");
 
