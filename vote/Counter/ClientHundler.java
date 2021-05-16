@@ -48,10 +48,16 @@ public class ClientHundler extends Thread
                 	if(msg.getInt() == 17)
                 		step17_decrypt_and_decrypt_and_publish(msg);
                 	if(msg.getInt() == 31)
-                		step31_decrypt_and_insign_and_publish(msg);
+                		step31_decrypt_and_unsign_and_publish(msg);
+                	if(msg.getInt() == 37)
+                		step37_decrypt_and_decrypt_and_publish(msg);
                 }
                 if(msg.getType() == Message.GET_VOTE_INFO)
                 	tellVoteInfo();
+                if(msg.getType() == Message.GET_NAMES_TABLE)
+                	sendNamesTable();
+                if(msg.getType() == Message.GET_BULLETIN_TABLE)
+                	sendBulletinTable();
                 if(msg.getType() == Message.OVER_AND_OUT)
                 {
                 	break;
@@ -161,7 +167,7 @@ public class ClientHundler extends Thread
 		}
 	}
 
-	private void step31_decrypt_and_insign_and_publish(Message msg4step31)
+	private void step31_decrypt_and_unsign_and_publish(Message msg4step31)
 	{
 		//31. Принимает сообщение и дешифрует: {M_sigC, M_enCheck, B_en2} = decrypt({M_sigC, M_enCheck, B_en2}_enC, C_privKey)
 
@@ -171,7 +177,7 @@ public class ClientHundler extends Thread
 
 		byte[] M_sigC = buffBA[0];
 		byte[] M_enCheck = buffBA[1];
-		byte[] B_en2 = buffBA[1];
+		byte[] B_en2 = buffBA[2];
 
 		//32. Проверяет свою подпись: M = unsign(M_sigC, C_privKey)
 		
@@ -183,8 +189,71 @@ public class ClientHundler extends Thread
 		}
 
 		//33. Публикует в специальном списке {M, M_enCheck, B_en2}
+		ArrayList<String> bulItem = new ArrayList<String>();
+		bulItem.add(string_M_sigC);
+		bulItem.add("empty");
+		bulItem.add(ByteWorker.Bytes2String(M_enCheck));
+		bulItem.add(ByteWorker.Bytes2String(B_en2));
 
-		System.out.println(string_M_sigC);
+		CounterHundler.addBulletinVote(bulItem);
+
+    	String[][] sArray = CounterHundler.getBulletinsTable();
+    	Message msg = Message.makeMessage().setType(Message.ALGORITHM).setBytes(ObjectConverter.obj2bytes(sArray));
+    	this.send(msg);
+	}
+
+	private void step37_decrypt_and_decrypt_and_publish(Message msg4step37)
+	{
+
+		//37. {M, key2} = decrypt({M, key2}_enC, C_privKey)
+
+		byte[] M_and_key2_enC = msg4step37.getBytes();
+		byte[] M_and_key2 = RSA4096.decrypt(M_and_key2_enC, CounterHundler.getPrivKey());
+		byte[][] buffBA = ByteWorker.Array2Arrays(M_and_key2);
+
+		byte[] M = buffBA[0];
+		byte[] key2 = buffBA[1];
+
+		String string_M = new String(M);
+		ArrayList<String> _bulletinItem = CounterHundler.getBulletinItem(string_M);
+
+		if(_bulletinItem == null)
+		{
+			System.out.println("blblbl");
+			return;
+		}
+
+		byte[] B_en2 = ByteWorker.String2Bytes(_bulletinItem.get(3));
+
+		//38. Дешифрует бюллетень: B = decrypt(B_en2, key2)
+
+		AES256 aes = new AES256();
+		aes.setKey(key2);
+		byte[] B = aes.decrypt(B_en2);
+		String string_B = new String(B);
+		if(!CounterHundler.getVoteMark().equals( CounterHundler.getVoteMark(string_B) ))
+		{
+			System.out.println("blbl");
+			return;
+		}
+
+		//39. Публикует рядом с {M, M_enCheck, B_en2} ещё и B
+		if(_bulletinItem.size() == 4)
+			CounterHundler.editBulletinItem(_bulletinItem, string_B);
+	}
+
+	private void sendNamesTable()
+	{
+    	String[][] sArray = CounterHundler.getNamesTable();
+    	Message msg = Message.makeMessage().setType(Message.SEND_NAMES_TABLE).setBytes(ObjectConverter.obj2bytes(sArray));
+    	this.send(msg);
+	}
+
+	private void sendBulletinTable()
+	{
+    	String[][] sArray = CounterHundler.getBulletinsTable();
+    	Message msg = Message.makeMessage().setType(Message.SEND_BULLETIN_TABLE).setBytes(ObjectConverter.obj2bytes(sArray));
+    	this.send(msg);
 	}
 
     private void closeConnection()

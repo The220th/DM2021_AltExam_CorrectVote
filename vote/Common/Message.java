@@ -13,6 +13,10 @@ public class Message implements Serializable
 	public static final int ALGORITHM_ERROR = 6;
 	public static final int ALGORITHM = 13;
 	public static final int OVER_AND_OUT = 15;
+	public static final int GET_NAMES_TABLE = 23;
+	public static final int GET_BULLETIN_TABLE = 24;
+	public static final int SEND_NAMES_TABLE = 25;
+	public static final int SEND_BULLETIN_TABLE = 26;
 
 	private int type;
 

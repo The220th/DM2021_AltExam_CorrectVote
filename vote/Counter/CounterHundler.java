@@ -22,6 +22,14 @@ class CounterHundler
     2: 3 - name
     */
     private static List<ArrayList<String>> names;
+    /*
+    1: 0 - M
+    1: 1 - пустое место, если метки совпали
+    1: 2 - M_enCheck
+    1: 3 - B_en2
+    2: 4 - B
+    */
+    private static List<ArrayList<String>> bulletins;
 
     private static Scanner inCon;
 
@@ -36,6 +44,7 @@ class CounterHundler
     private static byte[] validatorPubKey;
 
     private static Object syncNamesObject;
+    private static Object syncBulletinsObject;
 
     static
     {
@@ -43,8 +52,10 @@ class CounterHundler
     	votingOptions[0] = "Pizza"; votingOptions[1] = "Pasta"; votingOptions[2] = "Math";
     	inCon = new Scanner(System.in);
     	syncNamesObject = new Object();
+    	syncBulletinsObject = new Object();
     	clientsList = new ArrayList<ClientHundler>();
     	names = new ArrayList<ArrayList<String>>();
+    	bulletins = new ArrayList<ArrayList<String>>();
     	CounterHundler.step1_initKeys(CounterHundler.keysPath);
     	CounterHundler.initValidatorPubKey(CounterHundler.validatorKeysPath);
     	System.out.println("Mark of this vote:\"" + voteMark + "\".");
@@ -178,6 +189,71 @@ class CounterHundler
     	return CounterHundler.validatorPubKey;
     }
 
+    public static void addBulletinVote(ArrayList<String> bulletinItem)
+    {
+    	synchronized(syncBulletinsObject)
+    	{
+    		boolean UNIQ;
+    		UNIQ = true;
+    		for(ArrayList<String> item : bulletins)
+    			if(item.get(0).equals(bulletinItem.get(0)))
+    			{
+    				UNIQ = false;
+    				break;
+    			}
+    		if(UNIQ)
+    			bulletins.add(bulletinItem);
+    	}
+    }
+
+    public static void editBulletinItem(ArrayList<String> what, String whatAppend)
+    {
+    	synchronized(syncBulletinsObject)
+    	{
+    		what.add(whatAppend);
+    	}
+    }
+
+    public static ArrayList<String> getBulletinItem(int index)
+    {
+    	synchronized(syncBulletinsObject)
+    	{
+    		return bulletins.get(index);
+    	}
+    }
+
+    public static ArrayList<String> getBulletinItem(String mark)
+    {
+    	synchronized(syncBulletinsObject)
+    	{
+    		for(ArrayList<String> item : bulletins)
+    			if(item.get(0).equals(mark))
+    				return item;
+    		return null;
+    	}
+    }
+
+    public static String[][] getBulletinsTable()
+    {
+    	synchronized(syncBulletinsObject)
+    	{
+	    	String[][] res = new String[bulletins.size()][];
+	    	int i, j;
+	    	i = 0;
+	    	for(ArrayList<String> item : bulletins)
+	    	{
+	    		res[i] = new String[item.size()];
+	    		j = 0;
+	    		for(String itemitem : item)
+	    		{
+	    			res[i][j++] = itemitem;
+	    		}
+	    		++i;
+	    	}
+	    	return res;
+    	}
+    }
+
     public static void addNameItem(ArrayList<String> nameItem)
     {
     	synchronized(syncNamesObject)
@@ -222,7 +298,10 @@ class CounterHundler
 
     public static ArrayList<String> getNameItem(int index)
     {
-    	return names.get(index);
+    	synchronized(syncNamesObject)
+    	{
+    		return names.get(index);
+    	}
     }
 
     public static String[][] getNamesTable()

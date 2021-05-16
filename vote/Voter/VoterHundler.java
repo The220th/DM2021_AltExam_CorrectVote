@@ -121,6 +121,7 @@ class VoterHundler
 
     private static final String Counter_and_Validator_PathKeyString = "CounterAndValidatorPubKeys";
     private static final String key2_keyCheck_M_sigC_M_M_enCheck_B_B_en = "Phase2AfterWaiting";
+    private static final String names_and_bulletinTables = "NamesAndBulletinTables.txt";
     private static byte[] counterPubKey;
     private static byte[] validatorPubKey;
 
@@ -368,7 +369,7 @@ class VoterHundler
 			System.out.print("Make your choice: \n> ");
 			uc = inCon.nextLine();
 		}while(VoterHundler.checkChoiceInBulletin(uc) != true);
-		usedBulletin = "User choice: \"" + uc + "\"";
+		usedBulletin = VoterHundler.getVoteMark() + ":::" + "\"" + uc + "\"";
 		VoterHundler.logs("User choose: \"" + usedBulletin + "\".");
 		step24_25_genKey_and_enB();
 	}
@@ -416,7 +417,7 @@ class VoterHundler
 
 	private static void step28_genK_and_save()
 	{
-		//28. Генерирует число k.
+		//28. Генерирует число k
 		VoterHundler.logs("Generating k...");
 		Random r = new Random();
 		k_waitSec = r.nextInt(21)+5;
@@ -459,7 +460,7 @@ class VoterHundler
 
 	private static void step29_wait_and_wait()
 	{
-		//29. Ждёт k сек.
+		//29. Ждёт k сек
 		//Пойду реально попью чай и почитаю, а не вот этим вот заниматься...
 		System.out.println("Now the program will wait for " + k_waitSec + " seconds. At this step, you can turn it off and come back later.");
 		VoterHundler.logs("Begin waiting for " + k_waitSec + " sec...");
@@ -509,7 +510,132 @@ class VoterHundler
 		Message msg = Message.makeMessage().setType(Message.ALGORITHM).setInt(31).setBytes(M_sigC_and_M_enCheck_and_B_en2_enC);
 		VoterHundler.send(msg);
 		VoterHundler.logs("Sended.");
-		step_end(); //CONTINUE!!!!!
+		step34_checkPublic();
+	}
+
+	private static void step34_checkPublic()
+	{
+		//34. Видит опубликованное {M, M_enCheck, B_en2} и понимает, что время действовать дальше
+		VoterHundler.logs("Trying to check {M, M_enCheck, B_en2} in public list...");
+		VoterHundler.logs("Sending request for getting bulletins table...");
+		Message msg = VoterHundler.receive();
+		String[][] sArrays = (String[][])ObjectConverter.bytes2obj(msg.getBytes());
+		VoterHundler.logs("Received table. Len is " + sArrays.length + ".");
+
+		byte[] buffStringBytes = RSA4096.unsign(M_sign_mark, counterPubKey);
+		String buffString = new String(buffStringBytes);
+		VoterHundler.logs("Trying to search in public list \"" + buffString + "\".");
+		boolean FINDED;
+		FINDED = false;
+		for(int i = 0; i < sArrays.length; ++i)
+			if(sArrays[i][0].equals(buffString))
+			{
+				FINDED = true;
+				break;
+				//Ещё проверки нужны
+			}
+		if(FINDED == true)
+		{
+			VoterHundler.logs("FINDED in public list \"" + buffString +"\".");
+			step35_36_en4Send_and_send();
+		}
+		else
+		{
+			VoterHundler.logs("Cannot find in public list \"" + buffString +"\". Retrying...");
+			step30_sendToCounter();
+		}
+	}
+
+	private static void step35_36_en4Send_and_send()
+	{
+		//35. Шифрует для отправки: {M, key2}_enC = encrypt({M, key2}, C_pubKey).
+		VoterHundler.logs("Encrypting {M, key2}...");
+		byte[][] buffBA = new byte[2][];
+		buffBA[0] = M_mark;
+		buffBA[1] = key2;
+		byte[] M_and_key2 = ByteWorker.Arrays2Array(buffBA);
+		byte[] M_and_key2_enC = RSA4096.encrypt(M_and_key2, counterPubKey);
+		VoterHundler.logs("Encrypted and got {M, key2}_enC");
+		
+		//36. Отправляет {M, key2}_enC счётчику.
+
+		VoterHundler.logs("Sending {M, key2}_enC to counter...");
+		Message msg = Message.makeMessage().setType(Message.ALGORITHM).setInt(37).setBytes(M_and_key2_enC);
+		VoterHundler.send(msg);
+		VoterHundler.logs("Sended.");
+		step_check();
+	}
+
+	private static void step_check()
+	{
+		VoterHundler.logs("Check step.");
+		Message msg;
+		VoterHundler.logs("Sending request for getting names table...");
+		VoterHundler.send(Message.makeMessage().setType(Message.GET_NAMES_TABLE));
+		VoterHundler.logs("Getting...");
+		msg = VoterHundler.receive();
+		if(msg.getType() != Message.SEND_NAMES_TABLE)
+		{
+			VoterHundler.logs("Error getting names table...");
+			step_end();
+			return;
+		}
+		String[][] sArrays = (String[][])ObjectConverter.bytes2obj(msg.getBytes());
+		VoterHundler.logs("Received table. Len is " + sArrays.length + ".");
+
+		VoterHundler.logs("Sending request for getting bulletins table...");
+		VoterHundler.send(Message.makeMessage().setType(Message.GET_BULLETIN_TABLE));
+		VoterHundler.logs("Getting...");
+		msg = VoterHundler.receive();
+		if(msg.getType() != Message.SEND_BULLETIN_TABLE)
+		{
+			VoterHundler.logs("Error getting bulletins table...");
+			step_end();
+			return;
+		}
+		String[][] sArrays2 = (String[][])ObjectConverter.bytes2obj(msg.getBytes());
+		VoterHundler.logs("Received table. Len is " + sArrays2.length + ".");
+
+		VoterHundler.logs("Saving in file \"" + names_and_bulletinTables + "\"...");
+		
+		StringBuilder sb = new StringBuilder();
+
+		for(int i = 0; i < sArrays.length; ++i)
+		{
+			for(int j = 0; j < sArrays[i].length; ++j)
+			{
+				if(j != sArrays[i].length-1)
+					sb.append(sArrays[i][j] + ";");
+				else
+					sb.append(sArrays[i][j]);
+			}
+			sb.append("\n");
+		}
+		sb.append("\n\n");
+		for(int i = 0; i < sArrays2.length; ++i)
+		{
+			for(int j = 0; j < sArrays2[i].length; ++j)
+			{
+				if(j != sArrays2[i].length-1)
+					sb.append(sArrays2[i][j] + ";");
+				else
+					sb.append(sArrays2[i][j]);
+			}
+			sb.append("\n");
+		}
+
+		byte[] buffer = sb.toString().getBytes();
+		try(FileOutputStream fos = new FileOutputStream(names_and_bulletinTables))
+        {
+            fos.write(buffer, 0, buffer.length);
+        }
+        catch(IOException e)
+        {
+            e.printStackTrace();
+        }
+        VoterHundler.logs("Saved!");
+
+		step_end();
 	}
 
 	private static void step_end()
