@@ -29,7 +29,7 @@ class ValidatorHundler
         System.out.print("Input msg for sign: \n> ");
         String inputed = in.nextLine();
 
-        inputed = votemark + "::: " + inputed;
+        inputed = votemark + ":::" + inputed;
 
         System.out.println("==========\nThe message: \"" + inputed + "\" - will be signed.\n==========\n");
 

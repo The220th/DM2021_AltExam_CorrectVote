@@ -9,6 +9,7 @@ import java.io.File;
 
 import CipherLib.RSA4096;
 import CipherLib.ByteWorker;
+import CipherLib.Tools;
 
 class CounterHundler
 {
@@ -35,8 +36,10 @@ class CounterHundler
 
     private static final String keysPath = "counterKeys";
     private static final String validatorKeysPath = "validatorPubKey";
+    private static final String namesAndBulletinTablesPath = "namesAndBulletinTables";
+    private static final String sitePath = "../testSite/content/test/test.md";
 
-    private static final String voteMark = "HT3ABTS";
+    private static String voteMark;
     private static String[] votingOptions;
 
     private static byte[] pubKey;
@@ -54,11 +57,10 @@ class CounterHundler
     	syncNamesObject = new Object();
     	syncBulletinsObject = new Object();
     	clientsList = new ArrayList<ClientHundler>();
-    	names = new ArrayList<ArrayList<String>>();
-    	bulletins = new ArrayList<ArrayList<String>>();
+    	CounterHundler.loadTablesAndMarkFromFileIfExists(namesAndBulletinTablesPath);
     	CounterHundler.step1_initKeys(CounterHundler.keysPath);
     	CounterHundler.initValidatorPubKey(CounterHundler.validatorKeysPath);
-    	System.out.println("Mark of this vote:\"" + voteMark + "\".");
+    	System.out.println("Mark of this vote: \"" + voteMark + "\".");
     }
 
     public static void main(String[] args) throws IOException
@@ -204,6 +206,7 @@ class CounterHundler
     		if(UNIQ)
     			bulletins.add(bulletinItem);
     	}
+    	CounterHundler.saveTablesAndMark2File(namesAndBulletinTablesPath);
     }
 
     public static void editBulletinItem(ArrayList<String> what, String whatAppend)
@@ -212,6 +215,8 @@ class CounterHundler
     	{
     		what.add(whatAppend);
     	}
+    	CounterHundler.saveTablesAndMark2File(namesAndBulletinTablesPath);
+    	flushChangesOnSite();
     }
 
     public static ArrayList<String> getBulletinItem(int index)
@@ -269,6 +274,7 @@ class CounterHundler
 	    	if(UNIQ)
 	    		names.add(nameItem);
     	}
+    	CounterHundler.saveTablesAndMark2File(namesAndBulletinTablesPath);
     }
 
     public static boolean checkNameItemEquals(String name_sigV_2Check)
@@ -294,6 +300,7 @@ class CounterHundler
     	{
     		what.add(whatAppend);
     	}
+    	CounterHundler.saveTablesAndMark2File(namesAndBulletinTablesPath);
     }
 
     public static ArrayList<String> getNameItem(int index)
@@ -348,6 +355,132 @@ class CounterHundler
     		return null;
     	else
     		return from.substring(0, index);
+    }
+
+    @SuppressWarnings( "deprecation" )
+    private static void flushChangesOnSite()
+    {
+    	if(!sitePath.equals(""))
+    	{
+
+	    	Date d = new Date();
+	    	StringBuilder sb = new StringBuilder();
+	    	sb.append("---\n");
+			sb.append("title: \"Текущие результаты голосования\"\n");
+			//sb.append("date: 2021-" + (d.getMonth()+1>9?d.getMonth()+1:"0"+(d.getMonth()+1)) + "-" + (d.getDate()>9?d.getDate():"0"+d.getDate()) + "T22:06:10+03:00\n");
+			sb.append("date: 2021-04-14T22:06:10+03:00");
+			sb.append("draft: false\n");
+			sb.append("katex: false\n");
+			sb.append("---\n");
+			sb.append("\n");
+			sb.append("Кол-во голосов: 5051\n");
+			sb.append("\n");
+			sb.append("<div style=\"margin-left:-5px; margin-right:-5px;overflow-x:auto;\">\n");
+	    	sb.append("<div style=\"float: left;\n");
+	    	sb.append("width: 50%;\n");
+	    	sb.append("padding: 5px;\">\n");
+	    	sb.append("<table>\n");
+	        sb.append("<thead>\n");
+	        sb.append("<th>Name</th>\n");
+	        sb.append("</thead>\n");
+	        synchronized(syncNamesObject)
+	        {
+				for(ArrayList<String> item : names)
+		    	{
+		    		if(item.size() == 4)
+		    		{
+		    			sb.append("<tr>\n");
+		    			sb.append("<td>");
+		    			sb.append(item.get(3));
+		    			sb.append("</td>\n");
+		    			sb.append("</tr>\n");
+		    		}
+		    	}
+		    	sb.append("</table>\n");
+		    	sb.append("</div>\n");
+	        }
+	        sb.append("</table>\n");
+	   		sb.append("<div style=\"float: left;\n");
+	    	sb.append("width: 50%;\n");
+	    	sb.append("padding: 5px;\">\n");
+	    	sb.append("<table>\n");
+	        sb.append("<thead>\n");
+	        sb.append("<th>Mark</th>\n");
+	        sb.append("<th>Bulletin</th>\n");
+	        sb.append("</thead>\n");
+	        synchronized(syncBulletinsObject)
+	        {
+				for(ArrayList<String> item : bulletins)
+		    	{
+		    		if(item.size() == 5)
+		    		{
+		    			sb.append("<tr>\n");
+		    			sb.append("<td>");
+		    			sb.append(item.get(0));
+		    			sb.append("</td>\n");
+		    			sb.append("<td>");
+		    			sb.append(item.get(4));
+		    			sb.append("</td>\n");
+		    			sb.append("</tr>\n");
+		    		}
+		    	}
+		    	sb.append("</table>\n");
+		    	sb.append("</div>\n");
+	        }
+	        sb.append("</div>\n");
+	        byte[] buffer = sb.toString().getBytes();
+
+			try(FileOutputStream fos = new FileOutputStream(sitePath))
+			{
+			    fos.write(buffer, 0, buffer.length);
+			}
+			catch(IOException e)
+			{
+			    e.printStackTrace();
+			}
+
+		}
+    }
+
+    private static void saveTablesAndMark2File(String path2file)
+    {
+		synchronized(syncNamesObject)
+	    {
+	    	//saving names tales to file
+	    }
+	    synchronized(syncBulletinsObject)
+	    {
+			//saving bulletins tales to file
+	    }
+    }
+
+    private static void loadTablesAndMarkFromFileIfExists(String path2file)
+    {
+    	File file = new File(path2file);
+
+    	if( !(file.exists() && !file.isDirectory()) )
+    	{
+    		//file не существует, тогда создать заново
+    		names = new ArrayList<ArrayList<String>>();
+    		bulletins = new ArrayList<ArrayList<String>>();
+    		voteMark = Tools.genRndString(7);
+    	}
+    	else
+    	{
+    		//иначе загрузить из файла path2file
+
+			synchronized(syncNamesObject)
+		    {
+		    	//loading names tables to file path2file
+		    }
+		    synchronized(syncBulletinsObject)
+		    {
+				//loading bulletins tables to file path2file
+		    }
+
+		    //запушить на сайт, после загрузки
+		    flushChangesOnSite();
+    	}
     }
 
     public synchronized static ClientHundler getClientHundler(int index)

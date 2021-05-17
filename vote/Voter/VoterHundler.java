@@ -715,7 +715,7 @@ class VoterHundler
         {
         	e.printStackTrace();
         }
-	} 
+	}
 
 	private static ObjectOutputStream out()
 	{
@@ -781,7 +781,7 @@ class VoterHundler
 	{
 		Date d = new Date();
 		String toOut = "[" + (d.getYear()+1900) + ".";
-		toOut += (d.getMonth()>9?d.getMonth():"0"+d.getMonth()) + ".";
+		toOut += (d.getMonth()+1>9?d.getMonth()+1:"0"+(d.getMonth()+1)) + ".";
 		toOut += (d.getDate()>9?d.getDate():"0"+d.getDate()) + " ";
 		toOut += (d.getHours()>9?d.getHours():"0"+d.getHours()) + ":";
 		toOut += (d.getMinutes()>9?d.getMinutes():"0"+d.getMinutes()) + ":";
