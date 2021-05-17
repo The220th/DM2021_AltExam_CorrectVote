@@ -163,7 +163,26 @@ class VoterHundler
 
             VoterHundler.logs("Socket was created");
 
-            step_start();
+            int userChoice;
+            System.out.println("What do you want? \n\t1) Vote;\n\t2) See tables;\n\t3) Revote (coming soon...);\n");
+            do
+            {
+            	System.out.print("> ");
+            	userChoice = Integer.parseInt(inCon.nextLine());
+            }while(userChoice < 0 || userChoice > 2);
+
+            if(userChoice == 1)
+            	step_start();
+            else if(userChoice == 2)
+            {
+            	step_check();
+            	System.out.println("Tables in file + \"" + names_and_bulletinTables + "\".");
+            }
+            else if(userChoice == 3)
+            {
+            	//TODO=(
+            	userChoice = 3;
+            }
             
         }
         catch(Exception e)
@@ -180,7 +199,7 @@ class VoterHundler
 	{
 		VoterHundler.logs("Trying to get info about vote...");
         bulletin = VoterHundler.giveInfoAboutVote();
-        System.out.println(bulletin);
+        VoterHundler.logs("Received: " + bulletin);
 
         VoterHundler.logs("Trying to find file \"" + key2_keyCheck_M_sigC_M_M_enCheck_B_B_en + "\"...");
         
@@ -199,13 +218,21 @@ class VoterHundler
 
 	private static void step5_init_name_sigV()
 	{
-		VoterHundler.logs("Getting name_sigV. User input...");
-		System.out.print("Enter your name, signed by the validator: \n> ");
-		name_sigV = ByteWorker.String2Bytes(inCon.nextLine());
-		VoterHundler.logs("Checking sign of validator...");
-		byte[] unsigned = RSA4096.unsign(name_sigV, validatorPubKey);
-		VoterHundler.logs("Validator signs: \"" + new String(unsigned) + "\".");
-		step7_genM();
+		try
+		{
+			VoterHundler.logs("Getting name_sigV. User input...");
+			System.out.print("Enter your name, signed by the validator: \n> ");
+			name_sigV = ByteWorker.String2Bytes(inCon.nextLine());
+			VoterHundler.logs("Checking sign of validator...");
+			byte[] unsigned = RSA4096.unsign(name_sigV, validatorPubKey);
+			VoterHundler.logs("Validator signs: \"" + new String(unsigned) + "\".");
+			step7_genM();
+		}
+		catch(Exception e)
+		{
+			VoterHundler.logs("Trouble with unsign may be.");
+			e.printStackTrace();
+		}
 	}
 
 	private static void step7_genM()
@@ -366,6 +393,7 @@ class VoterHundler
 		do
 		{
 			VoterHundler.logs("User making his choice...");
+			System.out.println(bulletin);
 			System.out.print("Make your choice: \n> ");
 			uc = inCon.nextLine();
 		}while(VoterHundler.checkChoiceInBulletin(uc) != true);

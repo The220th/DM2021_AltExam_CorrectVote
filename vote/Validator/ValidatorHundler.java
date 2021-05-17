@@ -26,7 +26,7 @@ class ValidatorHundler
     	System.out.print("Input vote mark: \n> ");
     	String votemark = in.nextLine();
 
-        System.out.print("Input msg for sign: \n> ");
+        System.out.print("Input name for sign: \n> ");
         String inputed = in.nextLine();
 
         inputed = votemark + ":::" + inputed;

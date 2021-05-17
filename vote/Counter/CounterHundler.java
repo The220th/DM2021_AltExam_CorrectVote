@@ -37,7 +37,9 @@ class CounterHundler
     private static final String keysPath = "counterKeys";
     private static final String validatorKeysPath = "validatorPubKey";
     private static final String namesAndBulletinTablesPath = "namesAndBulletinTables";
+    //Comment this String sitePath and uncomment String sitePath = "" to remove site
     private static final String sitePath = "../testSite/content/test/test.md";
+    //private static final String sitePath = "";
 
     private static String voteMark;
     private static String[] votingOptions;
@@ -368,7 +370,7 @@ class CounterHundler
 	    	sb.append("---\n");
 			sb.append("title: \"Текущие результаты голосования\"\n");
 			//sb.append("date: 2021-" + (d.getMonth()+1>9?d.getMonth()+1:"0"+(d.getMonth()+1)) + "-" + (d.getDate()>9?d.getDate():"0"+d.getDate()) + "T22:06:10+03:00\n");
-			sb.append("date: 2021-04-14T22:06:10+03:00");
+			sb.append("date: 2021-04-14T22:06:10+03:00\n");
 			sb.append("draft: false\n");
 			sb.append("katex: false\n");
 			sb.append("---\n");
@@ -444,13 +446,15 @@ class CounterHundler
 
     private static void saveTablesAndMark2File(String path2file)
     {
+    	//saving vote mark to file path2file
+
 		synchronized(syncNamesObject)
 	    {
-	    	//saving names tales to file
+	    	//saving names table to file path2file
 	    }
 	    synchronized(syncBulletinsObject)
 	    {
-			//saving bulletins tales to file
+			//saving bulletins table to file path2file
 	    }
     }
 
@@ -469,13 +473,15 @@ class CounterHundler
     	{
     		//иначе загрузить из файла path2file
 
+    		//load vote mark from file path2file
+
 			synchronized(syncNamesObject)
 		    {
-		    	//loading names tables to file path2file
+		    	//loading names table from file path2file
 		    }
 		    synchronized(syncBulletinsObject)
 		    {
-				//loading bulletins tables to file path2file
+				//loading bulletins table from file path2file
 		    }
 
 		    //запушить на сайт, после загрузки
