@@ -102,12 +102,16 @@ class CounterHundler
 		byte[] buffer = null;
 		byte[][] buffBA;
 
+		CounterHundler.logs("Check if public and private keys are already generated...");
+
 		if(file.exists() && !file.isDirectory())
 		{
+			CounterHundler.logs("They are! Loading them...");
 			try(FileInputStream fin = new FileInputStream(filePathString))
 	        {
 				buffer = new byte[fin.available()];
 	            fin.read(buffer, 0, buffer.length);   
+	            CounterHundler.logs("Loaded successfully, now assign them...");
 			}
 			catch(IOException e)
 			{
@@ -116,14 +120,17 @@ class CounterHundler
 			buffBA = ByteWorker.Array2Arrays(buffer);
 			pubKey = buffBA[0];
 			privKey = buffBA[1];
+			CounterHundler.logs("Keys were assigned. Initialization of keys done!");
 		}
 		else
 		{
+			CounterHundler.logs("Generating private and public keys...");
 			RSA4096 rsa = new RSA4096();
 			rsa.genKeys();
 			pubKey = rsa.getPubKey();
 			privKey = rsa.getPrivKey();
 
+			CounterHundler.logs("Assigned them, now i'm gonna save them to file!");
 			buffBA = new byte[2][];
 			buffBA[0] = pubKey;
 			buffBA[1] = privKey;
@@ -132,9 +139,11 @@ class CounterHundler
 	        {
 	            buffer = ByteWorker.Arrays2Array(buffBA);
 	            fos.write(buffer, 0, buffer.length);
+	            CounterHundler.logs("I saved keys!");
 	        }
 	        catch(IOException e)
 	        {
+	            CounterHundler.logs("Something went wrong during saving keys to the file! Its path: " + filePathString);
 	            e.printStackTrace();
 	        }
 		}
@@ -148,31 +157,38 @@ class CounterHundler
 		byte[] buffer = null;
 		byte[][] buffBA;
 
+		CounterHundler.logs("Check if validatorPubKey already exists...");
 		if(file.exists() && !file.isDirectory())
 		{
+			CounterHundler.logs("It does! Gonna read key from the file");
 			try(FileInputStream fin = new FileInputStream(filePathString))
 	        {
 				buffer = new byte[fin.available()];
 	            fin.read(buffer, 0, buffer.length);   
+	            CounterHundler.logs("Read successfully!");
 			}
 			catch(IOException e)
 			{
+				CounterHundler.logs("Couldn't read from this file: " + filePathString);
 				e.printStackTrace();
 			}
 			validatorPubKey = buffer;
+			CounterHundler.logs("Assigned validatorPubKey.");
 		}
 		else
 		{
+			CounterHundler.logs("It doesn't.");
 			System.out.println("Input validatorPubKey:");
 			validatorPubKey = ByteWorker.String2Bytes(inCon.nextLine());
-
 	        try(FileOutputStream fos = new FileOutputStream(filePathString))
 	        {
 	            buffer = validatorPubKey;
 	            fos.write(buffer, 0, buffer.length);
+	            CounterHundler.logs("Successfully wrote validatorPubKey to the file!");
 	        }
 	        catch(IOException e)
 	        {
+	        	CounterHundler.logs("Couldn't read from this file: " + filePathString);
 	            e.printStackTrace();
 	        }
 	     }
@@ -180,21 +196,25 @@ class CounterHundler
 
     public synchronized static byte[] getPrivKey()
     {
+    	CounterHundler.logs("Someone want my private key... Well... Why not? Sending it...");
     	return CounterHundler.privKey;
     }
 
     public synchronized static byte[] getPubKey()
     {
+    	CounterHundler.logs("Someone want my public key... Sending it...");
     	return CounterHundler.pubKey;
     }
 
     public synchronized static byte[] getValidatorPubKey()
     {
+    	CounterHundler.logs("Someone want validatorPubKey, sending it...");
     	return CounterHundler.validatorPubKey;
     }
 
     public static void addBulletinVote(ArrayList<String> bulletinItem)
     {
+    	CounterHundler.logs("Adding bulletin to the list...");
     	synchronized(syncBulletinsObject)
     	{
     		boolean UNIQ;
@@ -208,21 +228,26 @@ class CounterHundler
     		if(UNIQ)
     			bulletins.add(bulletinItem);
     	}
+    	CounterHundler.logs("Saving names and bulletins...");
     	CounterHundler.saveTablesAndMark2File(namesAndBulletinTablesPath);
+    	CounterHundler.logs("The bulletin added, names and bulletins saved!");
     }
 
     public static void editBulletinItem(ArrayList<String> what, String whatAppend)
     {
+    	CounterHundler.logs("Some bulletin edited, refreshing data...");
     	synchronized(syncBulletinsObject)
     	{
     		what.add(whatAppend);
     	}
     	CounterHundler.saveTablesAndMark2File(namesAndBulletinTablesPath);
     	flushChangesOnSite();
+    	CounterHundler.logs("Changes flushed on site, tables and mark saved!");
     }
 
     public static ArrayList<String> getBulletinItem(int index)
     {
+    	CounterHundler.logs("Sending bulletin by index...");
     	synchronized(syncBulletinsObject)
     	{
     		return bulletins.get(index);
@@ -231,6 +256,7 @@ class CounterHundler
 
     public static ArrayList<String> getBulletinItem(String mark)
     {
+    	CounterHundler.logs("Sending bulletin by mark...");
     	synchronized(syncBulletinsObject)
     	{
     		for(ArrayList<String> item : bulletins)
@@ -242,6 +268,7 @@ class CounterHundler
 
     public static String[][] getBulletinsTable()
     {
+    	CounterHundler.logs("Sending bulletins table...");
     	synchronized(syncBulletinsObject)
     	{
 	    	String[][] res = new String[bulletins.size()][];
@@ -263,6 +290,7 @@ class CounterHundler
 
     public static void addNameItem(ArrayList<String> nameItem)
     {
+    	CounterHundler.logs("Got new name, adding one...");
     	synchronized(syncNamesObject)
     	{
 	    	boolean UNIQ;
@@ -277,10 +305,12 @@ class CounterHundler
 	    		names.add(nameItem);
     	}
     	CounterHundler.saveTablesAndMark2File(namesAndBulletinTablesPath);
+    	CounterHundler.logs("Changes saved!");
     }
 
     public static boolean checkNameItemEquals(String name_sigV_2Check)
     {
+    	CounterHundler.logs("Check if signed name exists...");
     	boolean UNIC;
     	UNIC = true;
     	synchronized(syncNamesObject)
@@ -289,24 +319,29 @@ class CounterHundler
     			if(item.size() == 4)
     				if(item.get(2).equals(name_sigV_2Check))
     				{
+    					CounterHundler.logs("It exists.");
     					UNIC = false;
     					break;
     				}
+    		CounterHundler.logs("It doesn't.");
     		return UNIC;
     	}
     }
 
     public static void editNameItem(ArrayList<String> what, String whatAppend)
     {
+    	CounterHundler.logs("Some name was edited, refreshing data...");
     	synchronized(syncNamesObject)
     	{
     		what.add(whatAppend);
     	}
     	CounterHundler.saveTablesAndMark2File(namesAndBulletinTablesPath);
+    	CounterHundler.logs("New data saved!");
     }
 
     public static ArrayList<String> getNameItem(int index)
     {
+    	CounterHundler.logs("Sending name by index...");
     	synchronized(syncNamesObject)
     	{
     		return names.get(index);
@@ -315,6 +350,7 @@ class CounterHundler
 
     public static String[][] getNamesTable()
     {
+    	CounterHundler.logs("Sending names table...");
     	synchronized(syncNamesObject)
     	{
 	    	String[][] res = new String[names.size()][];
@@ -336,6 +372,7 @@ class CounterHundler
 
     public static String getVoteInfo()
     {
+    	CounterHundler.logs("Sending vote info...");
     	String res = "";
     	res += "\n===============\n";
     	res += "Vote " + voteMark + "::: " + "Options: \n";
@@ -347,6 +384,7 @@ class CounterHundler
 
     public static String getVoteMark()
     {
+    	CounterHundler.logs("Sending voteMark...");
     	return CounterHundler.voteMark;
     }
 
@@ -447,9 +485,11 @@ class CounterHundler
     private static void saveTablesAndMark2File(String path2file)
     {
     	//saving vote mark to file path2file
+    	CounterHundler.logs("It's time to save data... The first item to be appended to string is voteMark.");
 		StringBuilder sb = new StringBuilder();
 		sb.append(voteMark);
 		sb.append('\n');
+		CounterHundler.logs("voteMark appended, it's names' turn now!");
 		synchronized(syncNamesObject)
 		{
 			//saving names table to file path2file
@@ -464,6 +504,7 @@ class CounterHundler
 				sb.append('\n');
 			}
 		}
+		CounterHundler.logs("Names successfully appended. The last item - bulletins...");
 		synchronized(syncBulletinsObject)
 		{
 			//saving bulletins table to file path2file
@@ -478,10 +519,12 @@ class CounterHundler
 				sb.append('\n');
 			}
 		}
+		CounterHundler.logs("Everything is appended, writting to file now...");
 		byte[] buffer = sb.toString().getBytes();
 		try(FileOutputStream fos = new FileOutputStream(path2file))
 		{
 			fos.write(buffer, 0, buffer.length);
+			CounterHundler.logs("Wrote to file. Save is done!");
 		}
 		catch(IOException e)
 		{
@@ -492,16 +535,19 @@ class CounterHundler
     private static void loadTablesAndMarkFromFileIfExists(String path2file)
     {
     	File file = new File(path2file);
-
+    	CounterHundler.logs("Check if file to be loaded exists...");
     	if( !(file.exists() && !file.isDirectory()) )
     	{
     		//file не существует, тогда создать заново
+    		CounterHundler.logs("No file, creating new lists for names and bulletins and generating voteMark.");
     		names = new ArrayList<ArrayList<String>>();
     		bulletins = new ArrayList<ArrayList<String>>();
     		voteMark = Tools.genRndString(7);
+    		CounterHundler.logs("Generated this voteMark: " + new String(voteMark));
     	}
     	else
     	{
+    		CounterHundler.logs("File exists. Create new lists for names and bulletins, read file then.");
     		//иначе загрузить из файла path2file
 			names = new ArrayList<ArrayList<String>>();
     		bulletins = new ArrayList<ArrayList<String>>();
@@ -511,16 +557,19 @@ class CounterHundler
 	        {
 				buffer = new byte[fin.available()];
 	            fin.read(buffer, 0, buffer.length);   
+	            CounterHundler.logs("Read file successfully.");
 			}
 			catch(IOException e)
 			{
 				e.printStackTrace();
 			}
+			CounterHundler.logs("Getting voteMark from long string...");
 			String sBuffer = new String(buffer);
 			int index = sBuffer.indexOf('\n');
 			String subBuffer = sBuffer.substring(0, index);
 			sBuffer = sBuffer.substring(index+11, sBuffer.length());
 			voteMark = subBuffer;
+			CounterHundler.logs("Got voteMark. Gonna fill names now...");
 			synchronized(syncNamesObject)
 		    {
 				//String[5] filler;
@@ -538,6 +587,7 @@ class CounterHundler
 					names.add(alBuff);
 				}
 		    }
+		    CounterHundler.logs("Names list was filled! Now bulletins...");
 			sBuffer = sBuffer.substring(12, sBuffer.length());
 		    synchronized(syncBulletinsObject)
 		    {
@@ -554,9 +604,10 @@ class CounterHundler
 					bulletins.add(alBuff);
 				}
 		    }
-
+		    CounterHundler.logs("Bulletins were loaded. Flush changes on site");
 		    //запушить на сайт, после загрузки
 		    flushChangesOnSite();
+		    CounterHundler.logs("Loading data is done!");
     	}
     }
 
@@ -569,4 +620,17 @@ class CounterHundler
     {
     	clientsList.remove(which);
     }
+
+    @SuppressWarnings( "deprecation" )
+	private static void logs(String logStr)
+	{
+		Date d = new Date();
+		String toOut = "[" + (d.getYear()+1900) + ".";
+		toOut += (d.getMonth()+1>9?d.getMonth()+1:"0"+(d.getMonth()+1)) + ".";
+		toOut += (d.getDate()>9?d.getDate():"0"+d.getDate()) + " ";
+		toOut += (d.getHours()>9?d.getHours():"0"+d.getHours()) + ":";
+		toOut += (d.getMinutes()>9?d.getMinutes():"0"+d.getMinutes()) + ":";
+		toOut += (d.getSeconds()>9?d.getSeconds():"0"+d.getSeconds()) + "] " + logStr;
+		System.out.println(toOut);
+	}
 }
