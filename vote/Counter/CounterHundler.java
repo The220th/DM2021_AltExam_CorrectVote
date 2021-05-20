@@ -38,8 +38,8 @@ class CounterHundler
     private static final String validatorKeysPath = "validatorPubKey";
     private static final String namesAndBulletinTablesPath = "namesAndBulletinTables";
     //Comment this String sitePath and uncomment String sitePath = "" to remove site
-    private static final String sitePath = "../testSite/content/test/test.md";
-    //private static final String sitePath = "";
+    //private static final String sitePath = "../testSite/content/test/test.md";
+    private static final String sitePath = "";
 
     private static String voteMark;
     private static String[] votingOptions;
@@ -479,7 +479,7 @@ class CounterHundler
 			}
 		}
 		byte[] buffer = sb.toString().getBytes();
-		try(FoleOutputStream fos = new FileOutputStream(path2file))
+		try(FileOutputStream fos = new FileOutputStream(path2file))
 		{
 			fos.write(buffer, 0, buffer.length);
 		}
@@ -503,7 +503,8 @@ class CounterHundler
     	else
     	{
     		//иначе загрузить из файла path2file
-
+			names = new ArrayList<ArrayList<String>>();
+    		bulletins = new ArrayList<ArrayList<String>>();
     		//load vote mark from file path2file
 			byte[] buffer = null;
 			try(FileInputStream fin = new FileInputStream(path2file))
@@ -515,8 +516,8 @@ class CounterHundler
 			{
 				e.printStackTrace();
 			}
-			String sBuffer = ByteWorker.Bytes2String(buffer);
-			int index = sBuffer.indexOf(';');
+			String sBuffer = new String(buffer);
+			int index = sBuffer.indexOf('\n');
 			String subBuffer = sBuffer.substring(0, index);
 			sBuffer = sBuffer.substring(index+11, sBuffer.length());
 			voteMark = subBuffer;
@@ -525,7 +526,7 @@ class CounterHundler
 				//String[5] filler;
 		    	//loading names table from file path2file
 				//while(sBuffer[0] != '=' && sBuffer[2] != 'b')
-				for(int i = 0; sBuffer[0] != '=' && sBuffer[2] != 'b'; ++i)
+				for(int i = 0; sBuffer.charAt(0) != '=' && sBuffer.charAt(2) != 'b'; ++i)
 				{
 					index = sBuffer.indexOf('\n');
 					subBuffer = sBuffer.substring(0, index);
@@ -541,7 +542,7 @@ class CounterHundler
 		    synchronized(syncBulletinsObject)
 		    {
 				//loading bulletins table from file path2file
-				while(sBuffer.size() > 0)
+				while(sBuffer.length() > 0)
 				{
 					index = sBuffer.indexOf('\n');
 					subBuffer = sBuffer.substring(0, index);
