@@ -447,15 +447,46 @@ class CounterHundler
     private static void saveTablesAndMark2File(String path2file)
     {
     	//saving vote mark to file path2file
-
+		StringBuilder sb = new StringBuilder();
+		sb.append(voteMark);
+		sb.append('\n');
 		synchronized(syncNamesObject)
-	    {
-	    	//saving names table to file path2file
-	    }
-	    synchronized(syncBulletinsObject)
-	    {
+		{
+			//saving names table to file path2file
+			sb.append("==names\n");
+			for(int i = 0; i < names.size(); ++i)
+			{
+				for(int j = 0; j < names.get(i).size(); ++j)
+				{
+					sb.append(names.get(i).get(j));
+					sb.append(";");
+				}
+				sb.append('\n');
+			}
+		}
+		synchronized(syncBulletinsObject)
+		{
 			//saving bulletins table to file path2file
-	    }
+			sb.append("==bulletins\n");
+			for(int i = 0; i < bulletins.size(); ++i)
+			{
+				for(int j = 0; j < bulletins.get(i).size(); ++j)
+				{
+					sb.append(bulletins.get(i).get(j));
+					sb.append(";");
+				}
+				sb.append('\n');
+			}
+		}
+		byte[] buffer = sb.toString().getBytes();
+		try(FoleOutputStream fos = new FileOutputStream(path2file))
+		{
+			fos.write(buffer, 0, buffer.length);
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
     }
 
     private static void loadTablesAndMarkFromFileIfExists(String path2file)
@@ -474,14 +505,53 @@ class CounterHundler
     		//иначе загрузить из файла path2file
 
     		//load vote mark from file path2file
-
+			byte[] buffer = null;
+			try(FileInputStream fin = new FileInputStream(path2file))
+	        {
+				buffer = new byte[fin.available()];
+	            fin.read(buffer, 0, buffer.length);   
+			}
+			catch(IOException e)
+			{
+				e.printStackTrace();
+			}
+			String sBuffer = ByteWorker.Bytes2String(buffer);
+			int index = sBuffer.indexOf(';');
+			String subBuffer = sBuffer.substring(0, index);
+			sBuffer = sBuffer.substring(index+11, sBuffer.length());
+			voteMark = subBuffer;
 			synchronized(syncNamesObject)
 		    {
+				//String[5] filler;
 		    	//loading names table from file path2file
+				//while(sBuffer[0] != '=' && sBuffer[2] != 'b')
+				for(int i = 0; sBuffer[0] != '=' && sBuffer[2] != 'b'; ++i)
+				{
+					index = sBuffer.indexOf('\n');
+					subBuffer = sBuffer.substring(0, index);
+					sBuffer = sBuffer.substring(index+1, sBuffer.length());
+					String[] filler = subBuffer.split(";");
+					ArrayList<String> alBuff = new ArrayList<String>();
+					for(String s : filler)
+						alBuff.add(s);
+					names.add(alBuff);
+				}
 		    }
+			sBuffer = sBuffer.substring(12, sBuffer.length());
 		    synchronized(syncBulletinsObject)
 		    {
 				//loading bulletins table from file path2file
+				while(sBuffer.size() > 0)
+				{
+					index = sBuffer.indexOf('\n');
+					subBuffer = sBuffer.substring(0, index);
+					sBuffer = sBuffer.substring(index+1, sBuffer.length());
+					String[] filler = subBuffer.split(";");
+					ArrayList<String> alBuff = new ArrayList<String>();
+					for(String s : filler)
+						alBuff.add(s);
+					bulletins.add(alBuff);
+				}
 		    }
 
 		    //запушить на сайт, после загрузки
