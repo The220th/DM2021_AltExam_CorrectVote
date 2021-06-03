@@ -11,7 +11,7 @@ import CipherLib.RSA4096;
 import CipherLib.ByteWorker;
 import CipherLib.Tools;
 
-class CounterHundler
+public class CounterHundler
 {
     public static final int PORT = 5051;
     private static ArrayList<ClientHundler> clientsList;

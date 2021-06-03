@@ -8,7 +8,7 @@ import java.io.File;
 import CipherLib.RSA4096;
 import CipherLib.ByteWorker;
 
-class ValidatorHundler
+public class ValidatorHundler
 {
     private static final String keysPath = "validatorKeys";
     private static byte[] pubKey;

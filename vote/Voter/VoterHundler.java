@@ -113,7 +113,7 @@ import CipherLib.Tools;
 */
 
 
-class VoterHundler
+public class VoterHundler
 {
     private static Socket clientSocket;
     private static ObjectInputStream objIn;
