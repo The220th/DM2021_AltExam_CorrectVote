@@ -122,6 +122,7 @@ class VoterHundler
     private static final String Counter_and_Validator_PathKeyString = "CounterAndValidatorPubKeys";
     private static final String key2_keyCheck_M_sigC_M_M_enCheck_B_B_en = "Phase2AfterWaiting";
     private static final String names_and_bulletinTables = "NamesAndBulletinTables.txt";
+	private static String SERVER_IP;
     private static byte[] counterPubKey;
     private static byte[] validatorPubKey;
 
@@ -153,13 +154,29 @@ class VoterHundler
     	aesCipher = new AES256();
 		inCon = new Scanner(System.in);
 		VoterHundler.init_counters_and_validator_keys(VoterHundler.Counter_and_Validator_PathKeyString);
+
+		Properties property = new Properties();
+		
+		try(FileInputStream fis = new FileInputStream("config.properties"))
+		{
+            property.load(fis);
+
+            SERVER_IP = property.getProperty("v.serverip");
+			if(SERVER_IP == null || SERVER_IP.equals(""))
+				System.err.println("No IP addr");
+
+        }
+		catch (IOException e)
+		{
+            System.err.println("Error. \"config.properties\" does not exists");
+        }
     }
 
 	public static void main(String[] args)
 	{
         try
         {
-            clientSocket = new Socket("localhost", 5051);
+            clientSocket = new Socket(SERVER_IP, 5051);
 
             VoterHundler.logs("Socket was created");
 
@@ -448,7 +465,8 @@ class VoterHundler
 		//28. Генерирует число k
 		VoterHundler.logs("Generating k...");
 		Random r = new Random();
-		k_waitSec = r.nextInt(21)+5;
+		//k_waitSec = r.nextInt(21)+5;
+		k_waitSec = r.nextInt(432000)+5;
 		VoterHundler.logs("k = " + k_waitSec);
 
 		/*Нужно сохранить:
@@ -490,7 +508,7 @@ class VoterHundler
 	{
 		//29. Ждёт k сек
 		//Пойду реально попью чай и почитаю, а не вот этим вот заниматься...
-		System.out.println("Now the program will wait for " + k_waitSec + " seconds. At this step, you can turn it off and come back later.");
+		System.out.println("Now the program will wait for " + k_waitSec + " seconds (" + (k_waitSec/(60.0*60.0)) + " hours). At this step, you can turn it off and come back later.");
 		VoterHundler.logs("Begin waiting for " + k_waitSec + " sec...");
 		try
 		{

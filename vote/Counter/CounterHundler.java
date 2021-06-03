@@ -39,10 +39,11 @@ class CounterHundler
     private static final String namesAndBulletinTablesPath = "namesAndBulletinTables";
     //Comment this String sitePath and uncomment String sitePath = "" to remove site
     //private static final String sitePath = "../testSite/content/test/test.md";
-    private static final String sitePath = "";
+    private static String sitePath = "";
 
     private static String voteMark;
     private static String[] votingOptions;
+	private static String voteHEAD;
 
     private static byte[] pubKey;
     private static byte[] privKey;
@@ -53,9 +54,10 @@ class CounterHundler
 
     static
     {
-    	votingOptions = new String[3];
-    	votingOptions[0] = "Pizza"; votingOptions[1] = "Pasta"; votingOptions[2] = "Math";
-    	inCon = new Scanner(System.in);
+    	//votingOptions = new String[3];
+    	//votingOptions[0] = "Pizza"; votingOptions[1] = "Pasta"; votingOptions[2] = "Math";
+    	loadProperties();
+		inCon = new Scanner(System.in);
     	syncNamesObject = new Object();
     	syncBulletinsObject = new Object();
     	clientsList = new ArrayList<ClientHundler>();
@@ -94,6 +96,32 @@ class CounterHundler
             server.close();
         }
     }
+
+	private static void loadProperties()
+	{
+		try(FileInputStream fis = new FileInputStream("config.properties"))
+		{
+			Properties property = new Properties();
+            property.load(fis);
+
+			voteHEAD = property.getProperty("s.votehead", "");
+            sitePath = property.getProperty("s.sitepath", "");
+			int i = 1;
+			while(property.getProperty("s.vote"+i, "").equals("") == false)
+			{
+				++i;
+			}
+			votingOptions = new String[i-1];
+			for(int j = 1; j < i; ++j)
+			{
+				votingOptions[j-1] = property.getProperty("s.vote"+j, "");
+			}
+        }
+		catch (IOException e)
+		{
+            System.err.println("Error. \"config.properties\" does not exists");
+        }
+	}
 
     private static void step1_initKeys(String filePathString)
     {
@@ -375,6 +403,7 @@ class CounterHundler
     	CounterHundler.logs("Sending vote info...");
     	String res = "";
     	res += "\n===============\n";
+		res += voteHEAD + "\n";
     	res += "Vote " + voteMark + "::: " + "Options: \n";
     	for(int i = 0; i < votingOptions.length; ++i)
     		res += "\t" + (i+1) + ") " + votingOptions[i] + ". \n";
@@ -402,7 +431,7 @@ class CounterHundler
     {
     	if(!sitePath.equals(""))
     	{
-
+			int amoung = 0;
 	    	Date d = new Date();
 	    	StringBuilder sb = new StringBuilder();
 	    	sb.append("---\n");
@@ -413,7 +442,33 @@ class CounterHundler
 			sb.append("katex: false\n");
 			sb.append("---\n");
 			sb.append("\n");
-			sb.append("Кол-во голосов: 5051\n");
+
+			int[] reses = new int[votingOptions.length];
+	        synchronized(syncBulletinsObject)
+	        {
+				for(int li = 0; li < reses.length; ++li)
+					reses[li] = 0;
+				int chooseed;
+				String libuffS;
+				for(ArrayList<String> item : bulletins)
+		    	{
+		    		if(item.size() == 5)
+		    		{
+						libuffS = item.get(4);
+						libuffS = libuffS.substring(libuffS.indexOf("\"")+1, libuffS.lastIndexOf("\""));
+						chooseed = Integer.parseInt(libuffS);
+						reses[chooseed-1]++;
+						++amoung;
+		    		}
+		    	}
+	        }
+
+			sb.append("Кол-во голосов: " + amoung + "\n\n");
+			sb.append(voteHEAD + "\n\n");
+			for(int li = 0; li < votingOptions.length; ++li)
+			{
+				sb.append(votingOptions[li] + ": " + reses[li] + "\n\n");
+			}
 			sb.append("\n");
 			sb.append("<div style=\"margin-left:-5px; margin-right:-5px;overflow-x:auto;\">\n");
 	    	sb.append("<div style=\"float: left;\n");
@@ -425,7 +480,9 @@ class CounterHundler
 	        sb.append("</thead>\n");
 	        synchronized(syncNamesObject)
 	        {
-				for(ArrayList<String> item : names)
+				List<ArrayList<String>> buffNames = new ArrayList<ArrayList<String>>(names);
+				Collections.shuffle(buffNames);
+				for(ArrayList<String> item : buffNames)
 		    	{
 		    		if(item.size() == 4)
 		    		{
@@ -450,7 +507,9 @@ class CounterHundler
 	        sb.append("</thead>\n");
 	        synchronized(syncBulletinsObject)
 	        {
-				for(ArrayList<String> item : bulletins)
+				List<ArrayList<String>> buffBulletins = new ArrayList<ArrayList<String>>(bulletins);
+				Collections.shuffle(buffBulletins);
+				for(ArrayList<String> item : buffBulletins)
 		    	{
 		    		if(item.size() == 5)
 		    		{
