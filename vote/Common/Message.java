@@ -17,6 +17,7 @@ public class Message implements Serializable
 	public static final int GET_BULLETIN_TABLE = 24;
 	public static final int SEND_NAMES_TABLE = 25;
 	public static final int SEND_BULLETIN_TABLE = 26;
+	public static final int EDIT_BULLETIN = 85;
 
 	private int type;
 

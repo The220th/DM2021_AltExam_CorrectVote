@@ -181,12 +181,12 @@ public class VoterHundler
             VoterHundler.logs("Socket was created");
 
             int userChoice;
-            System.out.println("What do you want? \n\t1) Vote;\n\t2) See tables;\n\t3) Revote (coming soon...);\n");
+            System.out.println("What do you want? \n\t1) Vote;\n\t2) See tables;\n\t3) Revote\n");
             do
             {
             	System.out.print("> ");
             	userChoice = Integer.parseInt(inCon.nextLine());
-            }while(userChoice < 0 || userChoice > 2);
+            }while(userChoice < 0 || userChoice > 3);
 
             if(userChoice == 1)
             	step_start();
@@ -197,7 +197,7 @@ public class VoterHundler
             }
             else if(userChoice == 3)
             {
-            	//TODO=(
+				step_edit();
             	userChoice = 3;
             }
             
@@ -681,6 +681,136 @@ public class VoterHundler
         }
         VoterHundler.logs("Saved!");
 
+		step_end();
+	}
+
+	private static void step_edit()
+	{
+		bulletin = VoterHundler.giveInfoAboutVote();
+		VoterHundler.logs("Try to edit the choice. Searching for file required...");
+		File file = new File(key2_keyCheck_M_sigC_M_M_enCheck_B_B_en);
+		if(file.exists() && !file.isDirectory())
+		{
+			VoterHundler.logs("Finded. Go to step " + "step_edit_loading" + ".");
+			step_edit_loading();
+		}
+		else
+		{
+			VoterHundler.logs("File not finded. Edit vote is unavailable!");
+        }
+	}
+
+	private static void step_edit_loading()
+	{
+		byte[][] buffBA;
+		byte[] buffer = null;
+		VoterHundler.logs("Trying to load {key2, keyCheck, M_sigC, M, M_enCheck, B, B_en} from file \"" + key2_keyCheck_M_sigC_M_M_enCheck_B_B_en + "\"...");
+		try(FileInputStream fin = new FileInputStream(key2_keyCheck_M_sigC_M_M_enCheck_B_B_en))
+        {
+			buffer = new byte[fin.available()];
+            fin.read(buffer, 0, buffer.length);
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
+		buffBA = ByteWorker.Array2Arrays(buffer);
+		key2 = buffBA[0];
+		keyCheck = buffBA[1];
+		M_sign_mark = buffBA[2];
+		M_mark = buffBA[3];
+		M_enCheck = buffBA[4];
+		usedBulletin = new String(buffBA[5]);
+		B_en2 = buffBA[6];
+		M_sigC_and_M_enCheck_and_B_en2_enC = buffBA[7];
+		VoterHundler.logs("Load successfully");
+		step_edit_makeChoice();
+	}
+
+	private static void step_edit_makeChoice()
+	{
+		String uc;
+		do
+		{
+			VoterHundler.logs("User making his choice...");
+			System.out.println(bulletin);
+			System.out.print("Make your choice: \n> ");
+			uc = inCon.nextLine();
+		}while(VoterHundler.checkChoiceInBulletin(uc) != true);
+		usedBulletin = VoterHundler.getVoteMark() + ":::" + "\"" + uc + "\"";
+		VoterHundler.logs("User choose: \"" + usedBulletin + "\".");
+		step_edit_editBulletin();
+	}
+
+	private static void step_edit_editBulletin()
+	{
+		String string_M = new String(M_mark);
+		aesCipher.genKey();
+		key2 = aesCipher.getKey();
+		B_en2 = aesCipher.encrypt(usedBulletin.getBytes());
+		byte[][] m_bytes = { string_M.getBytes(), key2, B_en2, usedBulletin.getBytes() };
+		byte[] toSend = ByteWorker.Arrays2Array(m_bytes);
+		Message msg = Message.makeMessage().setType(85).setBytes(toSend);
+		VoterHundler.send(msg);
+		VoterHundler.logs("Sended.");
+		step_edit_loadFile();
+	}
+
+	private static void step_edit_loadFile()
+	{
+		byte[][] buffBA;
+		byte[] buffer = null;
+		VoterHundler.logs("Trying to load {keyCheck, M_sigC, M, M_enCheck, B, B_en} from file \"" + key2_keyCheck_M_sigC_M_M_enCheck_B_B_en + "\"...");
+		try(FileInputStream fin = new FileInputStream(key2_keyCheck_M_sigC_M_M_enCheck_B_B_en))
+        {
+			buffer = new byte[fin.available()];
+            fin.read(buffer, 0, buffer.length);
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
+		buffBA = ByteWorker.Array2Arrays(buffer);
+		keyCheck = buffBA[1];
+		M_sign_mark = buffBA[2];
+		M_mark = buffBA[3];
+		M_enCheck = buffBA[4];
+		M_sigC_and_M_enCheck_and_B_en2_enC = buffBA[7];
+		VoterHundler.logs("Load successfully");
+		step_edit_saveFile();
+	}
+
+	private static void step_edit_saveFile()
+	{
+		VoterHundler.logs("Trying to save {key2, keyCheck, M_sigC, M, M_enCheck, B, B_en} in file \"" + key2_keyCheck_M_sigC_M_M_enCheck_B_B_en + "\".");
+		byte[][] buffBA = new byte[8][];
+		buffBA[0] = key2;
+		buffBA[1] = keyCheck;
+		buffBA[2] = M_sign_mark;
+		buffBA[3] = M_mark;
+		buffBA[4] = M_enCheck;
+		buffBA[5] = usedBulletin.getBytes();
+		buffBA[6] = B_en2;
+
+		byte[][] buffBA2 = new byte[3][];
+		buffBA2[0] = M_sign_mark;
+		buffBA2[1] = M_enCheck;
+		buffBA2[2] = B_en2;
+		byte[] M_sigC_and_M_enCheck_and_B_en2 = ByteWorker.Arrays2Array(buffBA2);
+		M_sigC_and_M_enCheck_and_B_en2_enC = RSA4096.encrypt(M_sigC_and_M_enCheck_and_B_en2, counterPubKey);
+
+		buffBA[7] = M_sigC_and_M_enCheck_and_B_en2_enC;
+		byte[] buffer;
+		try(FileOutputStream fos = new FileOutputStream(key2_keyCheck_M_sigC_M_M_enCheck_B_B_en))
+        {
+            buffer = ByteWorker.Arrays2Array(buffBA);
+            fos.write(buffer, 0, buffer.length);
+        }
+        catch(IOException e)
+        {
+            e.printStackTrace();
+        }
+		VoterHundler.logs("Saved!");
 		step_end();
 	}
 
