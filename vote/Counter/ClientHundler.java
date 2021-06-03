@@ -50,14 +50,16 @@ public class ClientHundler extends Thread
                 	if(msg.getInt() == 31)
                 		step31_decrypt_and_unsign_and_publish(msg);
                 	if(msg.getInt() == 37)
-                		step37_decrypt_and_decrypt_and_publish(msg);
+						step37_decrypt_and_decrypt_and_publish(msg);
                 }
                 if(msg.getType() == Message.GET_VOTE_INFO)
                 	tellVoteInfo();
                 if(msg.getType() == Message.GET_NAMES_TABLE)
                 	sendNamesTable();
                 if(msg.getType() == Message.GET_BULLETIN_TABLE)
-                	sendBulletinTable();
+					sendBulletinTable();
+				if(msg.getType() == Message.EDIT_BULLETIN)
+					step_edit_bulletin(msg);
                 if(msg.getType() == Message.OVER_AND_OUT)
                 {
                 	break;
@@ -240,6 +242,24 @@ public class ClientHundler extends Thread
 		//39. Публикует рядом с {M, M_enCheck, B_en2} ещё и B
 		if(_bulletinItem.size() == 4)
 			CounterHundler.editBulletinItem(_bulletinItem, string_B);
+	}
+
+	private void step_edit_bulletin(Message msg)
+	{
+		byte[] msgbyte = msg.getBytes();
+		//Mark, key2, B_en2, B
+		byte[][] info = ByteWorker.Array2Arrays(msgbyte);
+		String string_M = new String(info[0]);
+		ArrayList<String> _bulletinItem = CounterHundler.getBulletinItem(string_M);
+		if(_bulletinItem == null)
+		{
+			System.out.println("No such bulletin");
+			return;
+		}
+		AES256 aes = new AES256();
+		aes.setKey(info[1]);
+		String[] toSend = { ByteWorker.Bytes2String(info[2]), new String(info[3]) };
+		CounterHundler.editVoterChoice(_bulletinItem, toSend);
 	}
 
 	private void sendNamesTable()

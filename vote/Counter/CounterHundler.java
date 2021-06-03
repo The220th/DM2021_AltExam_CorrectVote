@@ -271,7 +271,20 @@ class CounterHundler
     	CounterHundler.saveTablesAndMark2File(namesAndBulletinTablesPath);
     	flushChangesOnSite();
     	CounterHundler.logs("Changes flushed on site, tables and mark saved!");
-    }
+	}
+	
+	public static void editVoterChoice(ArrayList<String> what, String[] whatWrite)
+	{
+		CounterHundler.logs("Some voter edited his/her choice, refreshing data...");
+    	synchronized(syncBulletinsObject)
+    	{
+			what.set(3, whatWrite[0]);
+			what.set(4, whatWrite[1]);
+    	}
+    	CounterHundler.saveTablesAndMark2File(namesAndBulletinTablesPath);
+    	flushChangesOnSite();
+    	CounterHundler.logs("Changes flushed on site, tables and mark saved!");
+	}
 
     public static ArrayList<String> getBulletinItem(int index)
     {
@@ -429,115 +442,122 @@ class CounterHundler
     @SuppressWarnings( "deprecation" )
     private static void flushChangesOnSite()
     {
-    	if(!sitePath.equals(""))
-    	{
-			int amoung = 0;
-	    	Date d = new Date();
-	    	StringBuilder sb = new StringBuilder();
-	    	sb.append("---\n");
-			sb.append("title: \"Текущие результаты голосования\"\n");
-			//sb.append("date: 2021-" + (d.getMonth()+1>9?d.getMonth()+1:"0"+(d.getMonth()+1)) + "-" + (d.getDate()>9?d.getDate():"0"+d.getDate()) + "T22:06:10+03:00\n");
-			sb.append("date: 2021-04-14T22:06:10+03:00\n");
-			sb.append("draft: false\n");
-			sb.append("katex: false\n");
-			sb.append("---\n");
-			sb.append("\n");
-
-			int[] reses = new int[votingOptions.length];
-	        synchronized(syncBulletinsObject)
-	        {
-				for(int li = 0; li < reses.length; ++li)
-					reses[li] = 0;
-				int chooseed;
-				String libuffS;
-				for(ArrayList<String> item : bulletins)
-		    	{
-		    		if(item.size() == 5)
-		    		{
-						libuffS = item.get(4);
-						libuffS = libuffS.substring(libuffS.indexOf("\"")+1, libuffS.lastIndexOf("\""));
-						chooseed = Integer.parseInt(libuffS);
-						reses[chooseed-1]++;
-						++amoung;
-		    		}
-		    	}
-	        }
-
-			sb.append("Кол-во голосов: " + amoung + "\n\n");
-			sb.append(voteHEAD + "\n\n");
-			for(int li = 0; li < votingOptions.length; ++li)
+		try
+		{
+			if(!sitePath.equals(""))
 			{
-				sb.append(votingOptions[li] + ": " + reses[li] + "\n\n");
-			}
-			sb.append("\n");
-			sb.append("<div style=\"margin-left:-5px; margin-right:-5px;overflow-x:auto;\">\n");
-	    	sb.append("<div style=\"float: left;\n");
-	    	sb.append("width: 50%;\n");
-	    	sb.append("padding: 5px;\">\n");
-	    	sb.append("<table>\n");
-	        sb.append("<thead>\n");
-	        sb.append("<th>Name</th>\n");
-	        sb.append("</thead>\n");
-	        synchronized(syncNamesObject)
-	        {
-				List<ArrayList<String>> buffNames = new ArrayList<ArrayList<String>>(names);
-				Collections.shuffle(buffNames);
-				for(ArrayList<String> item : buffNames)
-		    	{
-		    		if(item.size() == 4)
-		    		{
-		    			sb.append("<tr>\n");
-		    			sb.append("<td>");
-		    			sb.append(item.get(3));
-		    			sb.append("</td>\n");
-		    			sb.append("</tr>\n");
-		    		}
-		    	}
-		    	sb.append("</table>\n");
-		    	sb.append("</div>\n");
-	        }
-	        sb.append("</table>\n");
-	   		sb.append("<div style=\"float: left;\n");
-	    	sb.append("width: 50%;\n");
-	    	sb.append("padding: 5px;\">\n");
-	    	sb.append("<table>\n");
-	        sb.append("<thead>\n");
-	        sb.append("<th>Mark</th>\n");
-	        sb.append("<th>Bulletin</th>\n");
-	        sb.append("</thead>\n");
-	        synchronized(syncBulletinsObject)
-	        {
-				List<ArrayList<String>> buffBulletins = new ArrayList<ArrayList<String>>(bulletins);
-				Collections.shuffle(buffBulletins);
-				for(ArrayList<String> item : buffBulletins)
-		    	{
-		    		if(item.size() == 5)
-		    		{
-		    			sb.append("<tr>\n");
-		    			sb.append("<td>");
-		    			sb.append(item.get(0));
-		    			sb.append("</td>\n");
-		    			sb.append("<td>");
-		    			sb.append(item.get(4));
-		    			sb.append("</td>\n");
-		    			sb.append("</tr>\n");
-		    		}
-		    	}
-		    	sb.append("</table>\n");
-		    	sb.append("</div>\n");
-	        }
-	        sb.append("</div>\n");
-	        byte[] buffer = sb.toString().getBytes();
+				int amoung = 0;
+				Date d = new Date();
+				StringBuilder sb = new StringBuilder();
+				sb.append("---\n");
+				sb.append("title: \"Текущие результаты голосования\"\n");
+				//sb.append("date: 2021-" + (d.getMonth()+1>9?d.getMonth()+1:"0"+(d.getMonth()+1)) + "-" + (d.getDate()>9?d.getDate():"0"+d.getDate()) + "T22:06:10+03:00\n");
+				sb.append("date: 2021-04-14T22:06:10+03:00\n");
+				sb.append("draft: false\n");
+				sb.append("katex: false\n");
+				sb.append("---\n");
+				sb.append("\n");
 
-			try(FileOutputStream fos = new FileOutputStream(sitePath))
-			{
-			    fos.write(buffer, 0, buffer.length);
-			}
-			catch(IOException e)
-			{
-			    e.printStackTrace();
-			}
+				int[] reses = new int[votingOptions.length];
+				synchronized(syncBulletinsObject)
+				{
+					for(int li = 0; li < reses.length; ++li)
+						reses[li] = 0;
+					int chooseed;
+					String libuffS;
+					for(ArrayList<String> item : bulletins)
+					{
+						if(item.size() == 5)
+						{
+							libuffS = item.get(4);
+							libuffS = libuffS.substring(libuffS.indexOf("\"")+1, libuffS.lastIndexOf("\""));
+							chooseed = Integer.parseInt(libuffS);
+							reses[chooseed-1]++;
+							++amoung;
+						}
+					}
+				}
 
+				sb.append("Кол-во голосов: " + amoung + "\n\n");
+				sb.append(voteHEAD + "\n\n");
+				for(int li = 0; li < votingOptions.length; ++li)
+				{
+					sb.append(votingOptions[li] + ": " + reses[li] + "\n\n");
+				}
+				sb.append("\n");
+				sb.append("<div style=\"margin-left:-5px; margin-right:-5px;overflow-x:auto;\">\n");
+				sb.append("<div style=\"float: left;\n");
+				sb.append("width: 50%;\n");
+				sb.append("padding: 5px;\">\n");
+				sb.append("<table>\n");
+				sb.append("<thead>\n");
+				sb.append("<th>Name</th>\n");
+				sb.append("</thead>\n");
+				synchronized(syncNamesObject)
+				{
+					List<ArrayList<String>> buffNames = new ArrayList<ArrayList<String>>(names);
+					Collections.shuffle(buffNames);
+					for(ArrayList<String> item : buffNames)
+					{
+						if(item.size() == 4)
+						{
+							sb.append("<tr>\n");
+							sb.append("<td>");
+							sb.append(item.get(3));
+							sb.append("</td>\n");
+							sb.append("</tr>\n");
+						}
+					}
+					sb.append("</table>\n");
+					sb.append("</div>\n");
+				}
+				sb.append("</table>\n");
+				sb.append("<div style=\"float: left;\n");
+				sb.append("width: 50%;\n");
+				sb.append("padding: 5px;\">\n");
+				sb.append("<table>\n");
+				sb.append("<thead>\n");
+				sb.append("<th>Mark</th>\n");
+				sb.append("<th>Bulletin</th>\n");
+				sb.append("</thead>\n");
+				synchronized(syncBulletinsObject)
+				{
+					List<ArrayList<String>> buffBulletins = new ArrayList<ArrayList<String>>(bulletins);
+					Collections.shuffle(buffBulletins);
+					for(ArrayList<String> item : buffBulletins)
+					{
+						if(item.size() == 5)
+						{
+							sb.append("<tr>\n");
+							sb.append("<td>");
+							sb.append(item.get(0));
+							sb.append("</td>\n");
+							sb.append("<td>");
+							sb.append(item.get(4));
+							sb.append("</td>\n");
+							sb.append("</tr>\n");
+						}
+					}
+					sb.append("</table>\n");
+					sb.append("</div>\n");
+				}
+				sb.append("</div>\n");
+				byte[] buffer = sb.toString().getBytes();
+
+				try(FileOutputStream fos = new FileOutputStream(sitePath))
+				{
+					fos.write(buffer, 0, buffer.length);
+				}
+				catch(IOException e)
+				{
+					e.printStackTrace();
+				}
+
+			}
+		}
+		catch(Exception e)
+		{
+			CounterHundler.logs("Problems with site flushing.");
 		}
     }
 
