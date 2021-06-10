@@ -1,6 +1,8 @@
 # DM2021_AltExam_CorrectVote
 It is alt exam of DM CEM 4
 
+[Видео](https://youtu.be/PaDD9JCLTtA), как пользоваться программой.
+
 # Если вы голосующий (voter)
 
 [Скачайте](https://github.com/The220th/DM2021_AltExam_CorrectVote/releases) и запустите программу

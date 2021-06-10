@@ -153,7 +153,15 @@ public class VoterHundler
     {
     	aesCipher = new AES256();
 		inCon = new Scanner(System.in);
-		VoterHundler.init_counters_and_validator_keys(VoterHundler.Counter_and_Validator_PathKeyString);
+		try
+		{
+			VoterHundler.init_counters_and_validator_keys(VoterHundler.Counter_and_Validator_PathKeyString);
+		}
+		catch(Exception e)
+		{
+			System.out.println("\n==========\n\tYou entered the wrong counter or validator keys\n==========\n");
+			System.exit(0);
+		}
 
 		Properties property = new Properties();
 		
@@ -266,7 +274,15 @@ public class VoterHundler
 	{
 		//8. M_bl = blind(M, r, C_pubKey)
 		VoterHundler.logs("Generating closing multiplier...");
-		r_hide = RSA4096.genClosingMultiplier(counterPubKey);
+		try
+		{
+			r_hide = RSA4096.genClosingMultiplier(counterPubKey);
+		}
+		catch(Exception e)
+		{
+			System.out.println("\n==========\n\tYou entered the wrong counter or validator keys\n\tPlease delete the file \"" + VoterHundler.Counter_and_Validator_PathKeyString + "\" and try again\n==========\n");
+			System.exit(0);
+		}
 		VoterHundler.logs("Hidding M with closing multiplier...");
 		M_bl_mark = RSA4096.blind(M_mark, r_hide, counterPubKey);
 		VoterHundler.logs("Hided.");
